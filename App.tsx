@@ -19,7 +19,8 @@ import {
   Filter,
   AlertTriangle,
   CheckCircle,
-  FileJson
+  FileJson,
+  RefreshCw
 } from 'lucide-react';
 import { 
   PieChart, 
@@ -322,6 +323,25 @@ export default function App() {
     link.click();
   };
 
+  const exportToCSV = () => {
+    // BOM for Excel
+    const BOM = "\uFEFF"; 
+    let csv = BOM + "ID,Họ Tên,Giới Tính,Học Lực,Hay Nói Chuyện,Điểm TB Hạnh Kiểm\n";
+    students.forEach(s => {
+      const avg = calculateTotalAverage(s.id).toFixed(2);
+      // Clean data for CSV
+      const name = s.name.replace(/"/g, '""');
+      csv += `"${s.id}","${name}","${s.gender}","${s.academic}","${s.isTalkative ? 'Có' : ''}","${avg}"\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `danh_sach_lop_${new Date().toISOString().slice(0,10)}.csv`;
+    link.click();
+  };
+
   const handleImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -348,28 +368,18 @@ export default function App() {
 
         if (window.confirm(confirmMsg)) {
              // --- MERGE LOGIC ---
-             
-             // 1. Merge Students (Incoming overwrites existing by ID, adds new)
              const studentMap = new Map(students.map(s => [s.id, s]));
              incomingStudents.forEach(s => studentMap.set(s.id, s));
              const mergedStudents = Array.from(studentMap.values());
              
-             // 2. Merge Records
              const recordMap = new Map(records.map(r => [r.studentId, r]));
              incomingRecords.forEach(incRec => {
                  const existingRec = recordMap.get(incRec.studentId);
                  if (existingRec) {
-                     // Merge weekly conducts
                      const conductMap = new Map(existingRec.conducts.map(c => [c.week, c]));
                      incRec.conducts.forEach(c => conductMap.set(c.week, c));
-                     
-                     // Sort by week
                      const sortedConducts = Array.from(conductMap.values()).sort((a,b) => a.week - b.week);
-                     
-                     recordMap.set(incRec.studentId, {
-                         ...existingRec,
-                         conducts: sortedConducts
-                     });
+                     recordMap.set(incRec.studentId, { ...existingRec, conducts: sortedConducts });
                  } else {
                      recordMap.set(incRec.studentId, incRec);
                  }
@@ -380,7 +390,6 @@ export default function App() {
              setRecords(mergedRecords);
              
              alert(`Đã gộp dữ liệu! Tổng số học sinh: ${mergedStudents.length}`);
-
         } else {
              // --- REPLACE LOGIC ---
              if (window.confirm("CẢNH BÁO: Bạn chắc chắn muốn XÓA TOÀN BỘ dữ liệu hiện tại để thay thế bằng file backup không?")) {
@@ -390,12 +399,10 @@ export default function App() {
                 alert("Đã khôi phục dữ liệu thành công!");
              }
         }
-
       } catch (err) {
         console.error(err);
         alert("Lỗi đọc file. Vui lòng kiểm tra file JSON.");
       } finally {
-        // Reset input so change event fires again for same file
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
     };
@@ -454,7 +461,7 @@ export default function App() {
         <h2 className="text-xl font-bold text-slate-800">Danh Sách Học Sinh ({students.length})</h2>
         <div className="space-x-2 flex">
           <button onClick={() => setIsImportModalOpen(true)} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2">
-            <Upload size={18} /> Nhập Excel
+            <Upload size={18} /> Nhập Excel/CSV
           </button>
           <button onClick={() => setIsAddModalOpen(true)} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
             <Plus size={18} /> Thêm Mới
@@ -1021,13 +1028,11 @@ export default function App() {
              <div 
                className="grid gap-4"
                style={{ 
-                 gridTemplateColumns: `repeat(${GRID_COLS}, minmax(0, 1fr))` 
+                 gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)` // Fixed 1fr to force equality
                }}
              >
                {displayChart.map((seat, index) => {
                  // Logic to differentiate "walkways" if strictly following 8 cols
-                 // Usually walkways are between tables. If we assume 4 tables per row => 8 seats.
-                 // Maybe a gap in the middle (after 4th seat).
                  const isWalkway = (index % GRID_COLS) === 4; 
                  
                  return (
@@ -1038,24 +1043,32 @@ export default function App() {
                         onDrop={(e) => handleDrop(e, index)}
                         onDragOver={handleDragOver}
                         className={`
-                           relative aspect-square rounded-lg flex flex-col items-center justify-center p-2 text-center transition-all
+                           relative rounded-lg flex flex-col items-center justify-center text-center transition-all h-32 w-full
                            ${(index % GRID_COLS) === 4 ? 'ml-8' : ''} /* Visual gap for walkway */
                            ${seat.student 
                              ? 'bg-white border-2 border-slate-200 shadow-sm hover:border-blue-400 cursor-grab active:cursor-grabbing' 
                              : 'bg-slate-100 border border-dashed border-slate-300'
                            }
+                           ${isExportMode ? 'p-1' : 'p-2'}
                            ${draggedSeatIndex === index ? 'opacity-50' : 'opacity-100'}
                         `}
                      >
                        {seat.student ? (
                          <>
-                           <div className={`
-                             w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold mb-1 text-white
-                             ${seat.student.gender === Gender.MALE ? 'bg-blue-500' : 'bg-pink-500'}
+                           {!isExportMode && (
+                             <div className={`
+                               w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold mb-1 text-white shrink-0
+                               ${seat.student.gender === Gender.MALE ? 'bg-blue-500' : 'bg-pink-500'}
+                             `}>
+                               {seat.student.name.charAt(0)}
+                             </div>
+                           )}
+                           <span className={`
+                             font-bold text-slate-800 block w-full
+                             ${isExportMode 
+                               ? 'text-sm whitespace-normal break-words leading-tight' // Ensure wrapping
+                               : 'text-xs truncate leading-tight'}
                            `}>
-                             {seat.student.name.charAt(0)}
-                           </div>
-                           <span className="text-xs font-semibold text-slate-700 leading-tight line-clamp-2">
                              {seat.student.name}
                            </span>
                            {!isExportMode && (
@@ -1075,13 +1088,15 @@ export default function App() {
                })}
              </div>
              
-             <div className="mt-8 flex justify-center gap-6 text-sm text-gray-500">
-               <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-blue-500"></span> Nam</div>
-               <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-pink-500"></span> Nữ</div>
-               <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-green-500"></span> Học Tốt</div>
-               <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-500"></span> Học Yếu</div>
-               <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-yellow-500"></span> Hay nói</div>
-             </div>
+             {!isExportMode && (
+               <div className="mt-8 flex justify-center gap-6 text-sm text-gray-500">
+                 <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-blue-500"></span> Nam</div>
+                 <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-pink-500"></span> Nữ</div>
+                 <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-green-500"></span> Học Tốt</div>
+                 <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-500"></span> Học Yếu</div>
+                 <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-yellow-500"></span> Hay nói</div>
+               </div>
+             )}
           </div>
         </div>
       </div>
@@ -1101,7 +1116,7 @@ export default function App() {
           </p>
           <div className="flex gap-4 flex-wrap">
             <button onClick={exportData} className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 font-medium">
-               <Download size={18} /> Tải Xuống (Backup)
+               <Download size={18} /> Tải Xuống (Backup JSON)
             </button>
             
             <input 
@@ -1121,14 +1136,21 @@ export default function App() {
         </div>
 
         <div className="border-t pt-6">
-           <h3 className="font-semibold text-lg mb-2">Google Sheets</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Dữ liệu được tự động lưu vào trình duyệt. Để sao lưu lâu dài hoặc chuyển sang máy khác, hãy sử dụng chức năng Xuất/Nhập file.
-              <br/><span className="italic text-xs text-gray-400">* Tính năng đồng bộ trực tiếp Google Sheets cần đăng nhập OAuth (không khả dụng ở phiên bản demo này).</span>
+           <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
+             <FileSpreadsheet className="text-green-600"/> Đồng Bộ Google Sheets (Thủ Công)
+           </h3>
+            <p className="text-sm text-gray-600 mb-4 bg-gray-50 p-3 rounded border border-gray-200">
+               <strong>Lưu ý:</strong> Tính năng tự động đồng bộ (Auto Sync) không khả dụng do hạn chế về bảo mật trên trình duyệt. 
+               Vui lòng sử dụng tính năng <strong>Xuất CSV</strong> dưới đây để đưa dữ liệu lên Google Sheets, và tính năng <strong>Nhập Excel/CSV</strong> ở màn hình "Học Sinh" để cập nhật lại.
             </p>
-            <button onClick={() => window.open('https://docs.google.com/spreadsheets/create', '_blank')} className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded hover:bg-green-100 border border-green-200 font-medium">
-               <FileSpreadsheet size={18} /> Mở Google Sheets
-            </button>
+            <div className="flex gap-4">
+              <button onClick={exportToCSV} className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded hover:bg-green-100 border border-green-200 font-medium">
+                 <FileSpreadsheet size={18} /> Xuất ra Excel/CSV
+              </button>
+              <button onClick={() => window.open('https://docs.google.com/spreadsheets/create', '_blank')} className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">
+                 Mở Google Sheets Mới ↗
+              </button>
+            </div>
         </div>
 
         <div className="border-t pt-6">
