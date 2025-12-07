@@ -498,6 +498,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
 
   // Refs for Class Export
   const classReportRef = useRef<HTMLDivElement>(null);
+  const multiReportRef = useRef<HTMLDivElement>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -771,6 +772,21 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
           alert("Lỗi khi xuất ảnh. Vui lòng thử lại.");
       }
   };
+
+    const exportMultiReportImage = async () => {
+        if (!multiReportRef.current) return;
+        try {
+            const canvas = await html2canvas(multiReportRef.current, { scale: 1.5, useCORS: true });
+            const image = canvas.toDataURL("image/png");
+            const link = document.createElement("a");
+            link.href = image;
+            link.download = `BaoCaoChiTiet_Tuan${statsStartWeek}-${statsEndWeek}.png`;
+            link.click();
+        } catch (e) {
+            console.error(e);
+            alert("Lỗi khi xuất ảnh. Vui lòng thử lại.");
+        }
+    };
 
   const updateSettings = (partialSettings: any) => {
       const newSettings = { ...settings, ...partialSettings };
@@ -1421,54 +1437,67 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
 
                   {statsTab === 'multi-report' && (
                       <div>
-                           <h3 className="text-xl font-bold text-center mb-6 uppercase text-indigo-800">
-                               Tổng hợp (Tuần {statsStartWeek} - {statsEndWeek})
-                           </h3>
-                           <div className="space-y-6">
-                               {students.map(s => {
-                                   const studentRecords = records.filter(r => r.studentId === s.id && r.week >= statsStartWeek && r.week <= statsEndWeek && (r.violations.length > 0 || (r.positiveBehaviors && r.positiveBehaviors.length > 0) || r.note));
-                                   if (studentRecords.length === 0) return null;
-                                   
-                                   // Calculate quick stats for this period
-                                   const avg = Math.round(studentRecords.reduce((acc, cur) => acc + cur.score, 0) / studentRecords.length);
-                                   const rank = getRankFromScore(avg);
+                            <div className="flex justify-between items-center mb-4 border-b pb-2">
+                                <h3 className="text-xl font-bold uppercase text-indigo-800">
+                                    Tổng hợp (Tuần {statsStartWeek} - {statsEndWeek})
+                                </h3>
+                                <button 
+                                    onClick={exportMultiReportImage}
+                                    className="bg-indigo-600 text-white px-3 py-1.5 rounded text-sm flex items-center gap-2 hover:bg-indigo-700"
+                                >
+                                    <ImageIcon size={16}/> Xuất ảnh chi tiết
+                                </button>
+                            </div>
+                           
+                           {/* Wrapper for Export */}
+                           <div ref={multiReportRef} className="bg-white p-4">
+                               <div className="space-y-6">
+                                   {students.map(s => {
+                                       const studentRecords = records.filter(r => r.studentId === s.id && r.week >= statsStartWeek && r.week <= statsEndWeek && (r.violations.length > 0 || (r.positiveBehaviors && r.positiveBehaviors.length > 0) || r.note));
+                                       if (studentRecords.length === 0) return null;
+                                       
+                                       // Calculate quick stats for this period
+                                       const avg = Math.round(studentRecords.reduce((acc, cur) => acc + cur.score, 0) / studentRecords.length);
+                                       const rank = getRankFromScore(avg);
 
-                                   return (
-                                       <div key={s.id} className="border rounded-lg p-4 bg-gray-50 break-inside-avoid relative hover:shadow-md transition-shadow">
-                                           <div className="flex justify-between items-start border-b pb-2 mb-2">
-                                                <button 
-                                                    onClick={() => setSelectedStudentForDetail(s)}
-                                                    className="font-bold text-lg text-indigo-700 hover:underline flex items-center gap-2"
-                                                >
-                                                    {s.name} <User size={16}/>
-                                                </button>
-                                                <div className="text-right">
-                                                    <div className="text-xs text-gray-500">Trung bình giai đoạn</div>
-                                                    <span className={`text-sm font-bold px-2 py-0.5 rounded ${getRankColor(rank)}`}>
-                                                        {avg}đ - {rank}
-                                                    </span>
-                                                </div>
-                                           </div>
-                                           
-                                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                                               {studentRecords.sort((a,b) => a.week - b.week).map(r => (
-                                                   <div key={r.id} className="bg-white p-2 rounded border shadow-sm text-sm">
-                                                       <div className="flex justify-between items-center mb-1">
-                                                           <span className="font-bold text-indigo-600">Tuần {r.week}</span>
-                                                           <div className="flex items-center gap-1">
-                                                                <span className="text-xs font-bold border px-1 rounded">{r.score}đ</span>
-                                                                <span className={`text-[10px] px-1 rounded ${getRankColor(getRankFromScore(r.score))}`}>{getRankFromScore(r.score)}</span>
+                                       return (
+                                           <div key={s.id} className="border rounded-lg p-4 bg-gray-50 break-inside-avoid relative hover:shadow-md transition-shadow">
+                                               <div className="flex justify-between items-start border-b pb-2 mb-2">
+                                                    <button 
+                                                        onClick={() => setSelectedStudentForDetail(s)}
+                                                        className="font-bold text-lg text-indigo-700 hover:underline flex items-center gap-2"
+                                                    >
+                                                        {s.name} <User size={16}/>
+                                                    </button>
+                                                    <div className="text-right">
+                                                        <div className="text-xs text-gray-500">Trung bình giai đoạn</div>
+                                                        <span className={`text-sm font-bold px-2 py-0.5 rounded ${getRankColor(rank)}`}>
+                                                            {avg}đ - {rank}
+                                                        </span>
+                                                    </div>
+                                               </div>
+                                               
+                                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                                   {studentRecords.sort((a,b) => a.week - b.week).map(r => (
+                                                       <div key={r.id} className="bg-white p-2 rounded border shadow-sm text-sm">
+                                                           <div className="flex justify-between items-center mb-1">
+                                                               <span className="font-bold text-indigo-600">Tuần {r.week}</span>
+                                                               <div className="flex items-center gap-1">
+                                                                    <span className="text-xs font-bold border px-1 rounded">{r.score}đ</span>
+                                                                    <span className={`text-[10px] px-1 rounded ${getRankColor(getRankFromScore(r.score))}`}>{getRankFromScore(r.score)}</span>
+                                                               </div>
                                                            </div>
+                                                           {r.violations.length > 0 && <div className="text-red-700 mb-1">- {formatGroupedList(r.violations)}</div>}
+                                                           {r.positiveBehaviors && r.positiveBehaviors.length > 0 && <div className="text-green-700">+ {formatGroupedList(r.positiveBehaviors)}</div>}
+                                                           {r.note && <div className="text-gray-500 italic mt-1 border-t pt-1">Ghi chú: {r.note}</div>}
                                                        </div>
-                                                       {r.violations.length > 0 && <div className="text-red-700 mb-1">- {formatGroupedList(r.violations)}</div>}
-                                                       {r.positiveBehaviors && r.positiveBehaviors.length > 0 && <div className="text-green-700">+ {formatGroupedList(r.positiveBehaviors)}</div>}
-                                                       {r.note && <div className="text-gray-500 italic mt-1 border-t pt-1">Ghi chú: {r.note}</div>}
-                                                   </div>
-                                               ))}
+                                                   ))}
+                                               </div>
                                            </div>
-                                       </div>
-                                   );
-                               })}
+                                       );
+                                   })}
+                               </div>
+                               <div className="mt-6 text-center text-xs text-gray-400">Xuất từ Ứng dụng Lớp Học Thông Minh</div>
                            </div>
                       </div>
                   )}
