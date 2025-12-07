@@ -487,6 +487,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   const [statsStartWeek, setStatsStartWeek] = useState(1);
   const [statsEndWeek, setStatsEndWeek] = useState(4);
   const [statsTab, setStatsTab] = useState<'chart' | 'week-report' | 'multi-report' | 'semester'>('chart');
+  const [semesterMode, setSemesterMode] = useState<'s1' | 's2' | 'year'>('s1');
   
   // Settings Tab State
   const [settingTab, setSettingTab] = useState<'general' | 'behaviors'>('general');
@@ -526,6 +527,15 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
     if (score >= settings.thresholds.fair) return AcademicRank.FAIR;
     if (score >= settings.thresholds.pass) return AcademicRank.PASS;
     return AcademicRank.FAIL;
+  };
+
+  const getRankColor = (rank: string) => {
+    switch(rank) {
+        case AcademicRank.GOOD: return 'text-green-600 bg-green-50';
+        case AcademicRank.FAIR: return 'text-blue-600 bg-blue-50';
+        case AcademicRank.PASS: return 'text-yellow-600 bg-yellow-50';
+        default: return 'text-red-600 bg-red-50';
+    }
   };
 
   // Helper to format string array to grouped text for display (e.g. "Talk x2, Late")
@@ -832,9 +842,23 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
 
 
   // --- Semester Calculation Logic ---
-  const calculateSemesterRank = (student: Student) => {
+  const calculateSemesterRank = (student: Student, mode: 's1' | 's2' | 'year') => {
+      let startW = 1;
+      let endW = 35; // Default max
+
+      if (mode === 's1') {
+          startW = 1;
+          endW = settings.semesterTwoStartWeek - 1;
+      } else if (mode === 's2') {
+          startW = settings.semesterTwoStartWeek;
+          endW = 50; // Arbitrary high week
+      } else {
+          startW = 1;
+          endW = 50;
+      }
+
       // 1. Get weeks
-      const relevantRecords = records.filter(r => r.studentId === student.id && r.week >= statsStartWeek && r.week <= statsEndWeek);
+      const relevantRecords = records.filter(r => r.studentId === student.id && r.week >= startW && r.week <= endW);
       if (relevantRecords.length === 0) return { avgRaw: 0, avgConverted: 0, rank: '-' };
 
       // 2. Convert each week to points
@@ -907,6 +931,16 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                                             value={settings.semesterStartDate} 
                                             onChange={e => updateSettings({ semesterStartDate: e.target.value })} 
                                             className="w-full border p-2 rounded"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-gray-600 mb-1">Tuần bắt đầu HK2</label>
+                                        <input 
+                                            type="number" 
+                                            value={settings.semesterTwoStartWeek} 
+                                            onChange={e => updateSettings({ semesterTwoStartWeek: parseInt(e.target.value) })} 
+                                            className="w-full border p-2 rounded"
+                                            placeholder="19"
                                         />
                                     </div>
                                     <div>
@@ -1198,10 +1232,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                                     </td>
                                     <td className="p-3 text-center">
                                         {rank !== '-' && (
-                                            <span className={`px-2 py-0.5 rounded text-xs font-semibold
-                                                ${rank === AcademicRank.GOOD ? 'bg-green-100 text-green-700' :
-                                                rank === AcademicRank.FAIR ? 'bg-blue-100 text-blue-700' :
-                                                rank === AcademicRank.PASS ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                                            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${getRankColor(rank)}`}>
                                                 {rank}
                                             </span>
                                         )}
@@ -1249,17 +1280,19 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       {viewMode === 'stats' && (
           <div className="flex flex-col h-full gap-4">
               {/* Filter Bar */}
-              <div className="bg-white p-4 rounded-xl shadow-sm flex flex-wrap items-center gap-4">
-                  <span className="font-bold text-gray-700 flex items-center gap-2"><Search size={18}/> Bộ lọc:</span>
-                  <div className="flex items-center gap-2">
-                      <span className="text-sm">Từ tuần</span>
-                      <input type="number" min="1" value={statsStartWeek} onChange={e => setStatsStartWeek(parseInt(e.target.value))} className="w-16 border rounded p-1 text-center"/>
+              {statsTab !== 'semester' && (
+                  <div className="bg-white p-4 rounded-xl shadow-sm flex flex-wrap items-center gap-4">
+                      <span className="font-bold text-gray-700 flex items-center gap-2"><Search size={18}/> Bộ lọc:</span>
+                      <div className="flex items-center gap-2">
+                          <span className="text-sm">Từ tuần</span>
+                          <input type="number" min="1" value={statsStartWeek} onChange={e => setStatsStartWeek(parseInt(e.target.value))} className="w-16 border rounded p-1 text-center"/>
+                      </div>
+                      <div className="flex items-center gap-2">
+                          <span className="text-sm">Đến tuần</span>
+                          <input type="number" min="1" value={statsEndWeek} onChange={e => setStatsEndWeek(parseInt(e.target.value))} className="w-16 border rounded p-1 text-center"/>
+                      </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                      <span className="text-sm">Đến tuần</span>
-                      <input type="number" min="1" value={statsEndWeek} onChange={e => setStatsEndWeek(parseInt(e.target.value))} className="w-16 border rounded p-1 text-center"/>
-                  </div>
-              </div>
+              )}
 
               {/* Stats Tabs */}
               <div className="flex gap-2 border-b border-gray-200 overflow-x-auto">
@@ -1345,6 +1378,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                                             <th className="border p-2 w-10">STT</th>
                                             <th className="border p-2">Học sinh</th>
                                             <th className="border p-2 w-16">Điểm</th>
+                                            <th className="border p-2 w-20">Xếp loại</th>
                                             <th className="border p-2 w-1/4">Vi phạm</th>
                                             <th className="border p-2 w-1/4">Hành vi tốt</th>
                                             <th className="border p-2 w-1/4">Ghi chú</th>
@@ -1353,13 +1387,17 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                                     <tbody>
                                         {students.map((stu, index) => {
                                             const r = records.find(rec => rec.studentId === stu.id && rec.week === selectedWeek);
-                                            // Show all students in the class report image, even if empty
+                                            const score = r ? r.score : 0;
+                                            const rank = r ? getRankFromScore(score) : 'Chưa có';
                                             return (
                                                 <tr key={stu.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                                                     <td className="border p-2 text-center text-gray-500">{index + 1}</td>
                                                     <td className="border p-2 font-medium">{stu.name}</td>
                                                     <td className={`border p-2 text-center font-bold ${r ? (r.score < 50 ? 'text-red-600' : r.score < 80 ? 'text-yellow-600' : 'text-green-600') : 'text-gray-400'}`}>
                                                         {r ? r.score : '-'}
+                                                    </td>
+                                                    <td className="border p-2 text-center">
+                                                        {r && <span className={`text-xs font-bold px-1 rounded ${getRankColor(rank)}`}>{rank}</span>}
                                                     </td>
                                                     <td className="border p-2 text-red-700 text-xs">
                                                         {r ? formatGroupedList(r.violations) : ''}
@@ -1391,15 +1429,36 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                                    const studentRecords = records.filter(r => r.studentId === s.id && r.week >= statsStartWeek && r.week <= statsEndWeek && (r.violations.length > 0 || (r.positiveBehaviors && r.positiveBehaviors.length > 0) || r.note));
                                    if (studentRecords.length === 0) return null;
                                    
+                                   // Calculate quick stats for this period
+                                   const avg = Math.round(studentRecords.reduce((acc, cur) => acc + cur.score, 0) / studentRecords.length);
+                                   const rank = getRankFromScore(avg);
+
                                    return (
-                                       <div key={s.id} className="border rounded-lg p-4 bg-gray-50 break-inside-avoid">
-                                           <h4 className="font-bold text-lg text-gray-800 border-b pb-2 mb-2">{s.name}</h4>
+                                       <div key={s.id} className="border rounded-lg p-4 bg-gray-50 break-inside-avoid relative hover:shadow-md transition-shadow">
+                                           <div className="flex justify-between items-start border-b pb-2 mb-2">
+                                                <button 
+                                                    onClick={() => setSelectedStudentForDetail(s)}
+                                                    className="font-bold text-lg text-indigo-700 hover:underline flex items-center gap-2"
+                                                >
+                                                    {s.name} <User size={16}/>
+                                                </button>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-gray-500">Trung bình giai đoạn</div>
+                                                    <span className={`text-sm font-bold px-2 py-0.5 rounded ${getRankColor(rank)}`}>
+                                                        {avg}đ - {rank}
+                                                    </span>
+                                                </div>
+                                           </div>
+                                           
                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                                                {studentRecords.sort((a,b) => a.week - b.week).map(r => (
                                                    <div key={r.id} className="bg-white p-2 rounded border shadow-sm text-sm">
                                                        <div className="flex justify-between items-center mb-1">
                                                            <span className="font-bold text-indigo-600">Tuần {r.week}</span>
-                                                           <span className="text-xs font-bold border px-1 rounded">{r.score}đ</span>
+                                                           <div className="flex items-center gap-1">
+                                                                <span className="text-xs font-bold border px-1 rounded">{r.score}đ</span>
+                                                                <span className={`text-[10px] px-1 rounded ${getRankColor(getRankFromScore(r.score))}`}>{getRankFromScore(r.score)}</span>
+                                                           </div>
                                                        </div>
                                                        {r.violations.length > 0 && <div className="text-red-700 mb-1">- {formatGroupedList(r.violations)}</div>}
                                                        {r.positiveBehaviors && r.positiveBehaviors.length > 0 && <div className="text-green-700">+ {formatGroupedList(r.positiveBehaviors)}</div>}
@@ -1416,13 +1475,25 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
 
                   {statsTab === 'semester' && (
                       <div>
-                          <h3 className="text-xl font-bold text-center mb-2 uppercase text-indigo-800">
-                               Bảng Điểm Hạnh Kiểm Học Kỳ
-                          </h3>
-                          <p className="text-center text-sm text-gray-500 mb-6">
-                              Dữ liệu từ Tuần {statsStartWeek} đến Tuần {statsEndWeek}. 
-                              Quy đổi: Tốt={settings.rankScores.good}, Khá={settings.rankScores.fair}, Đạt={settings.rankScores.pass}, CĐ={settings.rankScores.fail}.
-                          </p>
+                          <div className="flex justify-between items-center mb-6 border-b pb-4">
+                              <h3 className="text-xl font-bold uppercase text-indigo-800">
+                                   Bảng Điểm Hạnh Kiểm
+                              </h3>
+                              <div className="flex bg-gray-100 p-1 rounded-lg">
+                                  <button onClick={() => setSemesterMode('s1')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${semesterMode === 's1' ? 'bg-white shadow text-indigo-700' : 'text-gray-500'}`}>Học Kỳ 1</button>
+                                  <button onClick={() => setSemesterMode('s2')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${semesterMode === 's2' ? 'bg-white shadow text-indigo-700' : 'text-gray-500'}`}>Học Kỳ 2</button>
+                                  <button onClick={() => setSemesterMode('year')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${semesterMode === 'year' ? 'bg-white shadow text-indigo-700' : 'text-gray-500'}`}>Cả Năm</button>
+                              </div>
+                          </div>
+
+                          <div className="mb-4 text-center bg-blue-50 text-blue-800 p-3 rounded text-sm">
+                              {semesterMode === 's1' && <span><strong>Học Kỳ 1:</strong> Tính từ Tuần 1 đến Tuần {settings.semesterTwoStartWeek - 1}</span>}
+                              {semesterMode === 's2' && <span><strong>Học Kỳ 2:</strong> Tính từ Tuần {settings.semesterTwoStartWeek} trở đi</span>}
+                              {semesterMode === 'year' && <span><strong>Cả Năm:</strong> Tổng hợp tất cả các tuần đã nhập</span>}
+                              <div className="text-xs mt-1 text-blue-600 opacity-80">
+                                  Quy đổi điểm: Tốt={settings.rankScores.good}, Khá={settings.rankScores.fair}, Đạt={settings.rankScores.pass}, CĐ={settings.rankScores.fail}
+                              </div>
+                          </div>
                           
                           <div className="overflow-x-auto">
                               <table className="w-full text-left border-collapse border rounded-lg overflow-hidden">
@@ -1431,22 +1502,19 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                                           <th className="p-3">Học sinh</th>
                                           <th className="p-3 text-center">ĐTB (Gốc)</th>
                                           <th className="p-3 text-center">ĐTB (Quy đổi)</th>
-                                          <th className="p-3 text-center">Xếp loại Học Kỳ</th>
+                                          <th className="p-3 text-center">Xếp loại {semesterMode === 'year' ? 'Cả Năm' : 'Học Kỳ'}</th>
                                       </tr>
                                   </thead>
                                   <tbody className="divide-y divide-gray-200">
                                       {students.map((s, idx) => {
-                                          const result = calculateSemesterRank(s);
+                                          const result = calculateSemesterRank(s, semesterMode);
                                           return (
                                               <tr key={s.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                                                   <td className="p-3 font-medium">{s.name}</td>
                                                   <td className="p-3 text-center text-gray-600">{result.avgRaw}</td>
                                                   <td className="p-3 text-center font-bold text-indigo-600">{result.avgConverted}</td>
                                                   <td className="p-3 text-center">
-                                                      <span className={`px-3 py-1 rounded-full text-xs font-bold border
-                                                          ${result.rank === AcademicRank.GOOD ? 'bg-green-100 text-green-700 border-green-200' :
-                                                          result.rank === AcademicRank.FAIR ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                                                          result.rank === AcademicRank.PASS ? 'bg-yellow-100 text-yellow-700 border-yellow-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
+                                                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getRankColor(result.rank)}`}>
                                                           {result.rank}
                                                       </span>
                                                   </td>
