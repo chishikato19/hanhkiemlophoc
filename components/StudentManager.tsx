@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Student, Gender, AcademicRank } from '../types';
 import { getStudents, saveStudents } from '../services/dataService';
-import { Plus, Trash2, FileSpreadsheet, Pencil, X, Save } from 'lucide-react';
+import { Plus, Trash2, FileSpreadsheet, Pencil, X, Save, Lock, Unlock } from 'lucide-react';
 import { addLog } from '../utils/logger';
 
 interface Props {
@@ -44,13 +44,27 @@ const StudentManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa học sinh này?')) {
+    if (window.confirm('Bạn có chắc chắn muốn xóa VĨNH VIỄN học sinh này? Nếu học sinh chỉ nghỉ học, hãy dùng nút Khóa.')) {
       const updated = students.filter(s => s.id !== id);
       setStudents(updated);
       saveStudents(updated);
       setHasUnsavedChanges(true);
       addLog('STUDENT', `Đã xóa học sinh ID: ${id}`);
     }
+  };
+
+  const handleToggleActive = (id: string, currentStatus: boolean) => {
+      const msg = currentStatus 
+        ? "Bạn muốn KHÓA học sinh này (nghỉ học/bảo lưu)? Học sinh sẽ ẩn khỏi báo cáo hạnh kiểm."
+        : "Bạn muốn MỞ KHÓA học sinh này?";
+        
+      if (window.confirm(msg)) {
+          const updated = students.map(s => s.id === id ? { ...s, isActive: !currentStatus } : s);
+          setStudents(updated);
+          saveStudents(updated);
+          setHasUnsavedChanges(true);
+          addLog('STUDENT', `Đã đổi trạng thái học sinh ID: ${id} sang ${!currentStatus ? 'Active' : 'Inactive'}`);
+      }
   };
 
   const handleSave = () => {
@@ -73,7 +87,8 @@ const StudentManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
         name: newName,
         gender: newGender,
         rank: newRank,
-        isTalkative: newTalkative
+        isTalkative: newTalkative,
+        isActive: true
       };
       const updated = [...students, newStudent];
       setStudents(updated);
@@ -112,7 +127,8 @@ const StudentManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
           name,
           gender,
           rank,
-          isTalkative
+          isTalkative,
+          isActive: true
         });
       }
     });
@@ -225,13 +241,17 @@ const StudentManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                     <th className="p-4 border-b">Giới tính</th>
                     <th className="p-4 border-b">Học lực</th>
                     <th className="p-4 border-b text-center">Nói chuyện</th>
+                    <th className="p-4 border-b text-center">Trạng thái</th>
                     <th className="p-4 border-b text-right">Thao tác</th>
                 </tr>
             </thead>
             <tbody className="divide-y">
                 {students.map(s => (
-                    <tr key={s.id} className="hover:bg-gray-50">
-                        <td className="p-4 font-medium">{s.name}</td>
+                    <tr key={s.id} className={`hover:bg-gray-50 ${!s.isActive ? 'bg-gray-100 opacity-60' : ''}`}>
+                        <td className="p-4 font-medium">
+                            {s.name}
+                            {!s.isActive && <span className="ml-2 text-xs bg-gray-500 text-white px-1.5 py-0.5 rounded">Đã khóa</span>}
+                        </td>
                         <td className="p-4 text-gray-500">{s.gender}</td>
                         <td className="p-4">
                             <span className={`px-2 py-1 rounded-full text-xs font-semibold
@@ -245,12 +265,21 @@ const StudentManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                         <td className="p-4 text-center">
                             {s.isTalkative ? <span className="text-red-500">⚠</span> : <span className="text-gray-300">-</span>}
                         </td>
+                        <td className="p-4 text-center">
+                             <button 
+                                onClick={() => handleToggleActive(s.id, s.isActive ?? true)}
+                                className={`p-1.5 rounded transition-colors ${s.isActive ? 'text-green-600 hover:bg-green-100' : 'text-gray-500 hover:bg-gray-200'}`}
+                                title={s.isActive ? "Đang học (Nhấn để khóa)" : "Đã khóa (Nhấn để mở)"}
+                             >
+                                 {s.isActive ? <Unlock size={18}/> : <Lock size={18}/>}
+                             </button>
+                        </td>
                         <td className="p-4 text-right">
                              <div className="flex justify-end gap-2">
                                 <button onClick={() => handleEditClick(s)} className="text-indigo-400 hover:text-indigo-600" title="Sửa">
                                     <Pencil size={18} />
                                 </button>
-                                <button onClick={() => handleDelete(s.id)} className="text-red-400 hover:text-red-600" title="Xóa">
+                                <button onClick={() => handleDelete(s.id)} className="text-red-400 hover:text-red-600" title="Xóa Vĩnh Viễn">
                                     <Trash2 size={18} />
                                 </button>
                              </div>
@@ -259,7 +288,7 @@ const StudentManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                 ))}
                 {students.length === 0 && (
                     <tr>
-                        <td colSpan={5} className="p-8 text-center text-gray-400">Chưa có dữ liệu học sinh.</td>
+                        <td colSpan={6} className="p-8 text-center text-gray-400">Chưa có dữ liệu học sinh.</td>
                     </tr>
                 )}
             </tbody>
