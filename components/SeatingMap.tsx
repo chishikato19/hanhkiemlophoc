@@ -6,7 +6,11 @@ import { autoArrangeSeating } from '../utils/seatingLogic';
 import { Printer, Shuffle, Save, Info, RotateCcw } from 'lucide-react';
 import { addLog } from '../utils/logger';
 
-const SeatingMap: React.FC = () => {
+interface Props {
+    setHasUnsavedChanges: (val: boolean) => void;
+}
+
+const SeatingMap: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [seats, setSeats] = useState<Seat[]>([]);
   const [draggedSeat, setDraggedSeat] = useState<Seat | null>(null);
@@ -47,6 +51,7 @@ const SeatingMap: React.FC = () => {
       const newLayout = autoArrangeSeating(students);
       setSeats([...newLayout]);
       saveSeatingMap(newLayout);
+      setHasUnsavedChanges(true);
     }
   };
 
@@ -60,12 +65,14 @@ const SeatingMap: React.FC = () => {
           }
           setSeats(emptySeats);
           saveSeatingMap(emptySeats);
+          setHasUnsavedChanges(true);
           addLog('SEATING', 'Đã xóa trắng sơ đồ chỗ ngồi.');
       }
   };
 
   const saveLayout = () => {
       saveSeatingMap(seats);
+      setHasUnsavedChanges(true);
       alert('Đã lưu sơ đồ!');
   };
 
@@ -118,6 +125,7 @@ const SeatingMap: React.FC = () => {
     setSeats(newSeats);
     setDraggedSeat(null);
     saveSeatingMap(newSeats); // Auto save on drop for better UX
+    setHasUnsavedChanges(true);
   };
 
   // --- Rendering Helpers ---
