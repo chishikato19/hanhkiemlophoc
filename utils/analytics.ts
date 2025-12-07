@@ -4,7 +4,7 @@ import { ConductRecord, Student, Settings, AcademicRank } from '../types';
 export interface Alert {
   type: 'CRITICAL' | 'WARNING' | 'INFO';
   message: string;
-  code: 'TREND' | 'RECURRING' | 'DROP' | 'THRESHOLD';
+  code: 'TREND' | 'RECURRING' | 'DROP' | 'THRESHOLD' | 'MISSING_DATA';
 }
 
 export interface StudentAnalysis {
@@ -23,7 +23,8 @@ export const analyzeStudent = (
   student: Student,
   records: ConductRecord[],
   settings: Settings,
-  currentWeek: number
+  currentWeek: number,
+  activeWeeks: number[] = [] 
 ): Alert[] => {
   const alerts: Alert[] = [];
   
@@ -32,7 +33,22 @@ export const analyzeStudent = (
     .filter(r => r.studentId === student.id)
     .sort((a, b) => a.week - b.week);
 
-  if (studentRecords.length < 2) return [];
+  // 0. Check for Missing Data in Active Weeks
+  // We only check weeks up to the current analysis week (currentWeek)
+  activeWeeks.forEach(week => {
+      if (week <= currentWeek) {
+          const hasRecord = studentRecords.some(r => r.week === week);
+          if (!hasRecord) {
+              alerts.push({
+                  type: 'WARNING',
+                  code: 'MISSING_DATA',
+                  message: `Chưa nhập dữ liệu Tuần ${week}.`
+              });
+          }
+      }
+  });
+
+  if (studentRecords.length < 2) return alerts; // Return early but include missing alerts if any
 
   // 1. Analyze Sudden Drop (Compared to previous 3-week average)
   const currentRecord = studentRecords.find(r => r.week === currentWeek);
@@ -104,23 +120,23 @@ export const analyzeStudent = (
   // 4. Threshold Danger (Semester context)
   // Calculate raw average up to now
   const allScores = studentRecords.map(r => r.score);
-  const totalAvg = Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length);
-  
-  // Check if hovering near a "Fail" or "Fair" boundary (within 2 points below threshold)
-  // e.g. Threshold Good is 80. If Avg is 78 or 79.
-  
-  if (totalAvg < settings.thresholds.pass) {
-       alerts.push({
-          type: 'CRITICAL',
-          code: 'THRESHOLD',
-          message: `Điểm trung bình (${totalAvg}) đang ở mức Yếu/Kém.`
-       });
-  } else if (totalAvg >= settings.thresholds.pass && totalAvg < settings.thresholds.pass + 3) {
-       alerts.push({
-          type: 'WARNING',
-          code: 'THRESHOLD',
-          message: `Nguy cơ rớt xuống mức Yếu (Hiện tại: ${totalAvg}).`
-       });
+  if (allScores.length > 0) {
+      const totalAvg = Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length);
+      
+      // Check if hovering near a "Fail" or "Fair" boundary (within 2 points below threshold)
+      if (totalAvg < settings.thresholds.pass) {
+           alerts.push({
+              type: 'CRITICAL',
+              code: 'THRESHOLD',
+              message: `Điểm trung bình (${totalAvg}) đang ở mức Yếu/Kém.`
+           });
+      } else if (totalAvg >= settings.thresholds.pass && totalAvg < settings.thresholds.pass + 3) {
+           alerts.push({
+              type: 'WARNING',
+              code: 'THRESHOLD',
+              message: `Nguy cơ rớt xuống mức Yếu (Hiện tại: ${totalAvg}).`
+           });
+      }
   }
 
   return alerts;
@@ -134,9 +150,14 @@ export const generateClassAnalysis = (
 ): StudentAnalysis[] => {
   const results: StudentAnalysis[] = [];
 
+  // Determine active weeks (weeks that have at least one record from any student)
+  const activeWeeksSet = new Set<number>();
+  records.forEach(r => activeWeeksSet.add(r.week));
+  const activeWeeks = Array.from(activeWeeksSet).sort((a,b) => a - b);
+
   students.forEach(student => {
     if (!student.isActive) return;
-    const alerts = analyzeStudent(student, records, settings, currentWeek);
+    const alerts = analyzeStudent(student, records, settings, currentWeek, activeWeeks);
     if (alerts.length > 0) {
       results.push({
         studentId: student.id,
@@ -146,12 +167,14 @@ export const generateClassAnalysis = (
     }
   });
 
-  // Sort by severity (CRITICAL first)
+  // Sort by severity (CRITICAL first, then WARNING (including MISSING_DATA))
   return results.sort((a, b) => {
     const aCrit = a.alerts.some(al => al.type === 'CRITICAL');
     const bCrit = b.alerts.some(al => al.type === 'CRITICAL');
     if (aCrit && !bCrit) return -1;
     if (!aCrit && bCrit) return 1;
-    return 0;
+    
+    // Secondary sort by number of alerts
+    return b.alerts.length - a.alerts.length;
   });
 };
