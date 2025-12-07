@@ -3,8 +3,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Student, ConductRecord, Settings, AcademicRank, BehaviorItem } from '../types';
 import { getStudents, getConductRecords, saveConductRecords, getSettings, saveSettings, uploadToCloud } from '../services/dataService';
-import { Settings as SettingsIcon, AlertTriangle, Calendar, User, CheckSquare, PlusCircle, X, Search, FileText, PieChart as PieChartIcon, LayoutList, ThumbsUp, Star, Trash2, Plus, MinusCircle, StickyNote, Download, ImageIcon, ArrowLeft, Copy, Lock, Unlock, Save, CloudUpload, ThumbsDown, BellRing, Filter, Eraser } from 'lucide-react';
+import { Settings as SettingsIcon, AlertTriangle, Calendar, User, CheckSquare, PlusCircle, X, Search, FileText, PieChart as PieChartIcon, LayoutList, ThumbsUp, Star, Trash2, Plus, MinusCircle, StickyNote, Download, ImageIcon, ArrowLeft, Copy, Lock, Unlock, Save, CloudUpload, ThumbsDown, BellRing, Filter, Eraser, Sparkles, TrendingDown, Repeat } from 'lucide-react';
 import { addLog } from '../utils/logger';
+import { generateClassAnalysis, analyzeStudent, Alert } from '../utils/analytics';
 
 // --- Constants ---
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444']; // Good, Fair, Pass, Fail
@@ -191,12 +192,18 @@ const TagSelector: React.FC<{
 const ReportCard: React.FC<{
     student: Student;
     record: ConductRecord | undefined;
+    allRecords: ConductRecord[];
     week: number;
     settings: Settings;
     cardRef: React.RefObject<HTMLDivElement | null>;
-}> = ({ student, record, week, settings, cardRef }) => {
+}> = ({ student, record, allRecords, week, settings, cardRef }) => {
     const score = record ? record.score : 0;
     
+    // Generate Analytics for Report Card
+    const alerts = useMemo(() => {
+        return analyzeStudent(student, allRecords, settings, week);
+    }, [student, allRecords, week, settings]);
+
     const getRank = (s: number) => {
         if (s >= settings.thresholds.good) return AcademicRank.GOOD;
         if (s >= settings.thresholds.fair) return AcademicRank.FAIR;
@@ -283,6 +290,22 @@ const ReportCard: React.FC<{
                             <ul className="list-disc list-inside bg-green-50 p-2 rounded text-green-800 border border-green-100 text-xs">
                                 {formatGroupedList(record.positiveBehaviors, settings.behaviorConfig.positives).map((v, i) => <li key={i}>{v}</li>)}
                             </ul>
+                        </div>
+                    )}
+
+                    {/* AI Alerts Section */}
+                    {alerts.length > 0 && (
+                        <div>
+                             <h4 className="font-bold text-orange-600 flex items-center gap-1 mb-1 text-xs uppercase">
+                                <Sparkles size={12} className="text-orange-500" /> Gợi ý từ hệ thống:
+                             </h4>
+                             <div className="bg-orange-50 p-2 rounded border border-orange-100 text-xs space-y-1">
+                                {alerts.map((a, i) => (
+                                    <p key={i} className="text-orange-800 flex gap-1.5 items-start">
+                                        <span className="mt-0.5">•</span> <span>{a.message}</span>
+                                    </p>
+                                ))}
+                             </div>
                         </div>
                     )}
 
@@ -505,6 +528,7 @@ const StudentDetailModal: React.FC<{
                                 <ReportCard 
                                     cardRef={cardRef}
                                     student={student}
+                                    allRecords={records}
                                     week={selectedWeekForCard}
                                     record={records.find(r => r.studentId === student.id && r.week === selectedWeekForCard)}
                                     settings={settings}
@@ -570,6 +594,13 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   const isLocked = useMemo(() => {
       return settings.lockedWeeks?.includes(selectedWeek);
   }, [settings.lockedWeeks, selectedWeek]);
+
+  // Analytics for the whole class (Current Week context)
+  const classAlerts = useMemo(() => {
+      // Use the END week of the selected range for analysis context
+      return generateClassAnalysis(students, records, settings, statsEndWeek);
+  }, [students, records, settings, statsEndWeek]);
+
 
   // Helpers
   const getWeekLabel = (weekNum: number) => {
@@ -1443,6 +1474,40 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       {/* === STATS MODE === */}
       {viewMode === 'stats' && (
           <div className="flex flex-col h-full gap-4">
+              
+              {/* SMART ANALYTICS WIDGET */}
+              {classAlerts.length > 0 && statsTab !== 'semester' && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+                      <h3 className="text-orange-800 font-bold flex items-center gap-2 mb-2">
+                          <AlertTriangle size={20} className="text-orange-600"/>
+                          Học sinh cần lưu ý (Tuần {statsStartWeek} - {statsEndWeek})
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {classAlerts.map(analysis => (
+                              <div key={analysis.studentId} className="bg-white border border-orange-100 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
+                                  <div className="font-bold text-gray-800 flex justify-between">
+                                      {analysis.studentName}
+                                      {analysis.alerts.some(a => a.type === 'CRITICAL') && <span className="bg-red-100 text-red-600 text-xs px-1.5 py-0.5 rounded font-bold">NGUY HIỂM</span>}
+                                  </div>
+                                  <ul className="mt-2 space-y-1">
+                                      {analysis.alerts.map((alert, idx) => (
+                                          <li key={idx} className="text-xs flex gap-2 items-start text-gray-700">
+                                              <span className="mt-0.5 min-w-[14px]">
+                                                  {alert.code === 'TREND' && <TrendingDown size={12} className="text-red-500"/>}
+                                                  {alert.code === 'RECURRING' && <Repeat size={12} className="text-orange-500"/>}
+                                                  {alert.code === 'DROP' && <TrendingDown size={12} className="text-yellow-600"/>}
+                                                  {alert.code === 'THRESHOLD' && <AlertTriangle size={12} className="text-red-500"/>}
+                                              </span>
+                                              <span>{alert.message}</span>
+                                          </li>
+                                      ))}
+                                  </ul>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              )}
+
               {/* Filter Bar */}
               {statsTab !== 'semester' && (
                   <div className="bg-white p-4 rounded-xl shadow-sm flex flex-wrap items-center gap-4">
