@@ -1,5 +1,5 @@
 {
   "name": "Lớp Học Thông Minh",
-  "description": "Ứng dụng quản lý học sinh, hạnh kiểm, và xếp chỗ ngồi thông minh.",
+  "description": "Ứng dụng quản lý học sinh, hạnh kiểm và xếp chỗ ngồi thông minh với thuật toán tối ưu hóa nhóm học tập.",
   "requestFramePermissions": []
 }
