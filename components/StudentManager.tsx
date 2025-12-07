@@ -1,10 +1,15 @@
+
 import React, { useState, useEffect } from 'react';
 import { Student, Gender, AcademicRank } from '../types';
 import { getStudents, saveStudents } from '../services/dataService';
 import { Plus, Trash2, FileSpreadsheet, Pencil, X, Save } from 'lucide-react';
 import { addLog } from '../utils/logger';
 
-const StudentManager: React.FC = () => {
+interface Props {
+    setHasUnsavedChanges: (val: boolean) => void;
+}
+
+const StudentManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState('');
@@ -43,6 +48,7 @@ const StudentManager: React.FC = () => {
       const updated = students.filter(s => s.id !== id);
       setStudents(updated);
       saveStudents(updated);
+      setHasUnsavedChanges(true);
       addLog('STUDENT', `Đã xóa học sinh ID: ${id}`);
     }
   };
@@ -74,6 +80,7 @@ const StudentManager: React.FC = () => {
       saveStudents(updated);
       addLog('STUDENT', `Đã thêm học sinh: ${newStudent.name}`);
     }
+    setHasUnsavedChanges(true);
     resetForm();
   };
 
@@ -116,6 +123,7 @@ const StudentManager: React.FC = () => {
       saveStudents(updated);
       setImportText('');
       setShowImport(false);
+      setHasUnsavedChanges(true);
       addLog('STUDENT', `Đã import thành công ${newStudents.length} học sinh.`);
       alert(`Đã thêm ${newStudents.length} học sinh!`);
     } else {
