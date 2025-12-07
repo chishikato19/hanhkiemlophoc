@@ -118,30 +118,53 @@ const Documentation: React.FC = () => {
 
         {activeSubTab === 'guide' && (
             <div className="prose max-w-none text-gray-700">
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Book size={24}/> Hướng dẫn sử dụng</h3>
+                <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Book size={24}/> Hướng dẫn Kết nối Google Sheets</h3>
                 
-                <h4 className="font-bold mt-4">1. Quản lý Học sinh</h4>
-                <ul className="list-disc ml-5">
-                    <li>Nhập tay từng học sinh hoặc dùng nút <strong>"Import Excel"</strong>.</li>
-                    <li>Định dạng copy từ Excel: 4 cột (Tên, Giới tính, Học lực, Hay nói chuyện). Copy cả bảng và paste vào ô text.</li>
-                    <li>Đã bổ sung tính năng Sửa/Xóa học sinh trực tiếp trên danh sách.</li>
-                </ul>
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 text-sm">
+                    <p>Để lưu dữ liệu online và dùng trên nhiều máy, hãy làm theo các bước sau:</p>
+                </div>
 
-                <h4 className="font-bold mt-4">2. Hạnh kiểm & Phiếu Liên Lạc</h4>
-                <ul className="list-disc ml-5">
-                    <li>Chọn tuần cần nhập liệu ở góc trên.</li>
-                    <li><strong>Nhập điểm:</strong> Hệ thống tự xếp loại (Tốt/Khá/Đạt/Chưa Đạt).</li>
-                    <li><strong>Xuất ảnh phiếu liên lạc:</strong> Nhấn vào tên học sinh -&gt; Chọn chế độ "Phiếu Liên Lạc" -&gt; Tải ảnh về máy.</li>
-                    <li>Ảnh được thiết kế đẹp mắt để gửi ngay cho phụ huynh qua Zalo.</li>
-                </ul>
+                <h4 className="font-bold mt-4">Bước 1: Tạo File Google Sheet</h4>
+                <ol className="list-decimal ml-5 space-y-1">
+                    <li>Truy cập <a href="https://sheets.google.com" target="_blank" className="text-blue-600 underline">Google Sheets</a> và tạo bảng tính mới.</li>
+                    <li>Đặt tên file (ví dụ: <code>DuLieu_LopHoc</code>).</li>
+                    <li>Không cần tạo sheet con, hệ thống sẽ tự động tạo.</li>
+                </ol>
 
-                <h4 className="font-bold mt-4">3. Đồng bộ đám mây (Cloud Sync)</h4>
-                <ul className="list-disc ml-5">
-                    <li>Kết nối với Google Sheets để lưu trữ dữ liệu an toàn.</li>
-                    <li>Nhấn nút <strong>"Sync"</strong> trên thanh menu.</li>
-                    <li><strong>Gửi lên Cloud:</strong> Đẩy dữ liệu từ máy này lên Sheet.</li>
-                    <li><strong>Lấy về Máy:</strong> Tải dữ liệu từ Sheet về (sẽ ghi đè dữ liệu hiện tại).</li>
-                </ul>
+                <h4 className="font-bold mt-4">Bước 2: Mở trình chỉnh sửa Apps Script</h4>
+                <ol className="list-decimal ml-5 space-y-1">
+                    <li>Trên thanh menu của Google Sheet, chọn <strong>Tiện ích mở rộng (Extensions)</strong> &gt; <strong>Apps Script</strong>.</li>
+                    <li>Đặt tên cho dự án (góc trên trái).</li>
+                </ol>
+
+                <h4 className="font-bold mt-4">Bước 3: Dán mã kết nối</h4>
+                <ol className="list-decimal ml-5 space-y-1">
+                    <li>Copy <strong>TOÀN BỘ</strong> đoạn mã trong khung màu đen ở tab <strong>"Dữ liệu & Kết nối"</strong> bên cạnh.</li>
+                    <li>Quay lại tab Apps Script, xóa hết nội dung cũ trong file <code>Code.gs</code>.</li>
+                    <li>Dán đoạn mã vừa copy vào. Nhấn <strong>Lưu</strong> (biểu tượng đĩa mềm).</li>
+                </ol>
+
+                <h4 className="font-bold mt-4">Bước 4: Triển khai (Deploy) - QUAN TRỌNG</h4>
+                <ol className="list-decimal ml-5 space-y-1">
+                    <li>Nhấn nút <strong>Triển khai (Deploy)</strong> màu xanh &gt; <strong>Tùy chọn triển khai mới (New deployment)</strong>.</li>
+                    <li>Bấm vào biểu tượng bánh răng &gt; chọn <strong>Ứng dụng web (Web app)</strong>.</li>
+                    <li>Điền thông tin:
+                        <ul className="list-disc ml-5 mt-1">
+                            <li>Mô tả: <code>v1</code></li>
+                            <li>Thực thi dưới dạng (Execute as): <strong>Tôi (Me)</strong></li>
+                            <li>Ai có quyền truy cập (Who has access): <strong>Bất kỳ ai (Anyone)</strong> <span className="text-red-500 font-bold">(Bắt buộc)</span></li>
+                        </ul>
+                    </li>
+                    <li>Nhấn <strong>Triển khai</strong>. Cấp quyền truy cập cho Google (chọn tài khoản của bạn &gt; Nâng cao &gt; Đi tới... (không an toàn)).</li>
+                    <li>Copy <strong>Ứng dụng Web URL</strong> (có dạng <code>https://script.google.com/...</code>).</li>
+                </ol>
+
+                <h4 className="font-bold mt-4">Bước 5: Kết nối vào App</h4>
+                <ol className="list-decimal ml-5 space-y-1">
+                    <li>Quay lại App này, vào tab <strong>"Dữ liệu & Kết nối"</strong>.</li>
+                    <li>Dán URL vào ô nhập liệu và nhấn <strong>Lưu</strong>.</li>
+                    <li>Bây giờ bạn có thể dùng nút <strong>Sync</strong> (Đám mây) hoặc nút <strong>Lưu & Sync</strong> ở màn hình Hạnh kiểm.</li>
+                </ol>
             </div>
         )}
         
@@ -150,14 +173,27 @@ const Documentation: React.FC = () => {
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-indigo-700"><History size={24}/> Lịch sử Cập nhật</h3>
                 
                 <div className="relative border-l-2 border-indigo-200 ml-3 space-y-8 pl-6 py-2">
-                     {/* v1.6 */}
+                     {/* v1.7 */}
                     <div className="relative">
                         <span className="absolute -left-[33px] bg-indigo-600 text-white rounded-full p-1.5 ring-4 ring-indigo-50"><GitCommit size={16}/></span>
-                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 1.6 (Mới nhất)</h4>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 1.7 (Mới nhất)</h4>
                         <span className="text-xs text-gray-500 font-mono">Current Build</span>
                         <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
-                            <li><strong>Đồng bộ Google Sheets 2 chiều:</strong> Upload và Download dữ liệu trọn vẹn (Học sinh, Hạnh kiểm, Cấu hình).</li>
-                            <li><strong>Xuất Phiếu Liên Lạc:</strong> Tạo ảnh phiếu điểm tuần đẹp mắt để gửi Zalo cho phụ huynh.</li>
+                            <li><strong>Khóa/Mở khóa tuần:</strong> Ngăn chặn chỉnh sửa nhầm dữ liệu các tuần cũ.</li>
+                            <li><strong>Nút Lưu nhanh:</strong> Thêm nút "Lưu & Sync" ngay tại màn hình nhập liệu.</li>
+                            <li><strong>Cảnh báo chưa lưu:</strong> Hiển thị cảnh báo khi chuyển trang nếu chưa lưu dữ liệu mới.</li>
+                            <li><strong>Xuất ảnh Cả lớp:</strong> Xuất bảng tổng hợp tuần của cả lớp ra file ảnh.</li>
+                            <li><strong>Trừ điểm cả lớp:</strong> Thêm nút trừ điểm tập thể.</li>
+                        </ul>
+                    </div>
+
+                     {/* v1.6 */}
+                    <div className="relative">
+                        <span className="absolute -left-[33px] bg-gray-200 text-gray-500 rounded-full p-1.5"><GitCommit size={16}/></span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 1.6</h4>
+                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
+                            <li><strong>Đồng bộ Google Sheets 2 chiều:</strong> Upload và Download dữ liệu trọn vẹn.</li>
+                            <li><strong>Xuất Phiếu Liên Lạc:</strong> Tạo ảnh phiếu điểm tuần đẹp mắt.</li>
                         </ul>
                     </div>
 
@@ -168,16 +204,6 @@ const Documentation: React.FC = () => {
                         <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
                             <li>Thêm tính năng <strong>Sao lưu & Phục hồi</strong> dữ liệu qua file JSON.</li>
                             <li>Bổ sung ô nhập <strong>Google Apps Script URL</strong>.</li>
-                        </ul>
-                    </div>
-
-                    {/* v1.4 */}
-                    <div className="relative">
-                        <span className="absolute -left-[33px] bg-gray-200 text-gray-500 rounded-full p-1.5"><GitCommit size={16}/></span>
-                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 1.4</h4>
-                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
-                            <li>Thêm cột <strong>Ghi chú</strong> vào bảng nhập hạnh kiểm.</li>
-                            <li>Bổ sung tab Lịch sử cập nhật (Changelog).</li>
                         </ul>
                     </div>
                 </div>
@@ -239,11 +265,9 @@ const Documentation: React.FC = () => {
                      </div>
 
                      <div className="mt-4 bg-gray-100 p-4 rounded text-sm text-gray-600">
-                        <h4 className="font-bold mb-2">Hướng dẫn Cập nhật mã Apps Script (Quan trọng!):</h4>
-                        <p className="mb-2">Bạn cần copy đoạn mã <strong>mới nhất</strong> bên dưới vào File <code>Code.gs</code> trên Google Script Editor và Deploy lại (chọn New Version).</p>
+                        <h4 className="font-bold mb-2">Mã Script (Copy đoạn này vào Code.gs):</h4>
                         <pre className="bg-gray-800 text-gray-100 p-3 rounded text-xs overflow-x-auto font-mono whitespace-pre-wrap select-all">
 {`function doGet(e) {
-  // Trả về thông báo đơn giản hoặc hướng dẫn
   return ContentService.createTextOutput("Smart Classroom API is running.");
 }
 
@@ -264,7 +288,7 @@ function doPost(e) {
         sSheet.getRange(1, 1, rows.length, 5).setValues(rows);
       }
       
-      // 2. Lưu Conduct (Vào Sheet 'Conduct') - Lưu dạng JSON string cho mỗi record để đơn giản hóa cấu trúc
+      // 2. Lưu Conduct (Vào Sheet 'Conduct') - Lưu dạng JSON string
       var cSheet = getSheet(sheet, 'Conduct');
       cSheet.clear();
       if (data.conduct && data.conduct.length > 0) {
@@ -272,7 +296,7 @@ function doPost(e) {
         cSheet.getRange(1, 1, cRows.length, 4).setValues(cRows);
       }
       
-      // 3. Lưu Settings & Seating (Vào Sheet 'Config' dạng Key-Value)
+      // 3. Lưu Settings & Seating
       var cfgSheet = getSheet(sheet, 'Config');
       cfgSheet.clear();
       var configRows = [
@@ -302,7 +326,6 @@ function doPost(e) {
       var cSheet = sheet.getSheetByName('Conduct');
       if (cSheet && cSheet.getLastRow() > 0) {
          var rows = cSheet.getRange(1, 1, cSheet.getLastRow(), 4).getValues();
-         // Cột 4 chứa JSON full record
          result.conduct = rows.map(r => JSON.parse(r[3]));
       }
       
