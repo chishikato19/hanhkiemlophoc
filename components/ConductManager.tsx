@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Student, ConductRecord, Settings, AcademicRank, BehaviorItem } from '../types';
 import { getStudents, getConductRecords, saveConductRecords, getSettings, saveSettings, uploadToCloud } from '../services/dataService';
-import { Settings as SettingsIcon, AlertTriangle, Calendar, User, CheckSquare, PlusCircle, X, Search, FileText, PieChart as PieChartIcon, LayoutList, ThumbsUp, Star, Trash2, Plus, MinusCircle, StickyNote, Download, ImageIcon, ArrowLeft, Copy, Lock, Unlock, Save, CloudUpload, ThumbsDown, BellRing, Filter, Eraser, Sparkles, TrendingDown, Repeat } from 'lucide-react';
+import { Settings as SettingsIcon, AlertTriangle, Calendar, User, CheckSquare, PlusCircle, X, Search, FileText, PieChart as PieChartIcon, LayoutList, ThumbsUp, Star, Trash2, Plus, MinusCircle, StickyNote, Download, ImageIcon, ArrowLeft, Copy, Lock, Unlock, Save, CloudUpload, ThumbsDown, BellRing, Filter, Eraser, Sparkles, TrendingDown, Repeat, FileQuestion } from 'lucide-react';
 import { addLog } from '../utils/logger';
 import { generateClassAnalysis, analyzeStudent, Alert } from '../utils/analytics';
 
@@ -201,7 +201,13 @@ const ReportCard: React.FC<{
     
     // Generate Analytics for Report Card
     const alerts = useMemo(() => {
-        return analyzeStudent(student, allRecords, settings, week);
+        // Calculate active weeks from allRecords to pass to analyzeStudent
+        // This ensures the Missing Data check works correctly in the context of the report
+        const activeWeeksSet = new Set<number>();
+        allRecords.forEach(r => activeWeeksSet.add(r.week));
+        const activeWeeks = Array.from(activeWeeksSet).sort((a,b) => a - b);
+        
+        return analyzeStudent(student, allRecords, settings, week, activeWeeks);
     }, [student, allRecords, week, settings]);
 
     const getRank = (s: number) => {
@@ -585,6 +591,14 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
     setRecords(getConductRecords());
     setSettings(getSettings());
   }, []);
+
+  // Auto-set stats end week to the latest week with data when entering statistics mode
+  useEffect(() => {
+    if (viewMode === 'stats') {
+         const maxWeek = records.length > 0 ? Math.max(...records.map(r => r.week)) : 1;
+         setStatsEndWeek(maxWeek);
+    }
+  }, [viewMode, records.length]);
 
   // Filter Active Students
   const activeStudents = useMemo(() => {
@@ -1497,6 +1511,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                                                   {alert.code === 'RECURRING' && <Repeat size={12} className="text-orange-500"/>}
                                                   {alert.code === 'DROP' && <TrendingDown size={12} className="text-yellow-600"/>}
                                                   {alert.code === 'THRESHOLD' && <AlertTriangle size={12} className="text-red-500"/>}
+                                                  {alert.code === 'MISSING_DATA' && <FileQuestion size={12} className="text-blue-500"/>}
                                               </span>
                                               <span>{alert.message}</span>
                                           </li>
