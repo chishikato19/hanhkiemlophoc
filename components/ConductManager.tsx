@@ -42,6 +42,27 @@ const TagSelector: React.FC<{
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [wrapperRef]);
 
+    const handleRemoveTag = (e: React.MouseEvent, tag: string) => {
+        e.stopPropagation(); // Stop opening the dropdown
+        if (disabled) return;
+
+        // 1. Try to find in available items
+        const item = availableItems.find(i => i.label === tag);
+        if (item) {
+            onChange(tag, item.points, -1);
+            return;
+        }
+
+        // 2. If not found, try to parse points from string format "Name (+5đ)" or "Name (-2đ)"
+        const match = tag.match(/\(([+-]?\d+)đ\)/);
+        let parsedPoints = 0;
+        if (match && match[1]) {
+            parsedPoints = parseInt(match[1], 10);
+        }
+
+        onChange(tag, parsedPoints, -1);
+    };
+
     if (disabled) {
         return (
              <div className="flex flex-wrap gap-1 min-h-[28px] items-center opacity-60">
@@ -58,14 +79,28 @@ const TagSelector: React.FC<{
         <div className="relative w-full" ref={wrapperRef}>
             <div className="flex gap-1 flex-wrap min-h-[28px]">
                 {Object.keys(counts).length > 0 ? (
-                    <div className="flex flex-wrap gap-1 w-full items-center" onClick={() => setIsOpen(!isOpen)}>
+                    <div className="flex flex-wrap gap-1 w-full items-center">
                         {Object.entries(counts).map(([tag, count], idx) => (
-                            <span key={idx} className={`text-xs px-1.5 py-0.5 rounded border cursor-pointer font-medium flex items-center gap-1 ${isPositive ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                            <span 
+                                key={idx} 
+                                className={`group relative text-xs px-1.5 py-0.5 rounded border cursor-pointer font-medium flex items-center gap-1 pr-5 hover:pr-5 transition-all
+                                ${isPositive ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100' : 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100'}`}
+                                onClick={() => setIsOpen(!isOpen)}
+                            >
                                 {tag} 
                                 {(count as number) > 1 && <span className="bg-white bg-opacity-50 px-1 rounded-full text-[10px]">x{count}</span>}
+                                
+                                <button
+                                    onClick={(e) => handleRemoveTag(e, tag)}
+                                    className={`absolute right-0.5 top-0.5 p-0.5 rounded-full hover:bg-white hover:shadow-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}
+                                    title="Xóa lỗi này (Hoàn lại điểm)"
+                                >
+                                    <X size={10} strokeWidth={3} />
+                                </button>
                             </span>
                         ))}
                          <button 
+                            onClick={() => setIsOpen(!isOpen)}
                             className={`ml-auto focus:outline-none opacity-50 hover:opacity-100 ${isPositive ? 'text-green-600' : 'text-red-600'}`}
                         >
                             <PlusCircle size={16} />
