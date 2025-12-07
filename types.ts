@@ -37,6 +37,7 @@ export interface BehaviorItem {
 
 export interface Settings {
   semesterStartDate: string; // ISO Date string YYYY-MM-DD
+  semesterTwoStartWeek: number; // The week number where Semester 2 begins
   thresholds: {
     good: number;
     fair: number;
