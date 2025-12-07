@@ -16,11 +16,12 @@ const SeatingMap: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   const [draggedSeat, setDraggedSeat] = useState<Seat | null>(null);
 
   useEffect(() => {
-    const loadedStudents = getStudents();
+    // Only load active students
+    const loadedStudents = getStudents().filter(s => s.isActive !== false);
     setStudents(loadedStudents);
     const savedSeats = getSeatingMap();
     
-    // Clean up seats that might refer to deleted students
+    // Clean up seats that might refer to deleted OR inactive students
     if (savedSeats && savedSeats.length > 0) {
         const cleanedSeats = savedSeats.map(seat => {
             if (seat.studentId) {
