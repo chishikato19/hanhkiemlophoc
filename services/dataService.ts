@@ -43,7 +43,8 @@ const defaultSettings: Settings = {
       { id: 'p4', label: 'Tham gia trực nhật tốt', points: 2 },
       { id: 'p5', label: 'Giúp đỡ bạn bè', points: 2 }
     ]
-  }
+  },
+  lockedWeeks: []
 };
 
 // --- Mock/Seed Data ---
@@ -119,7 +120,8 @@ export const getSettings = (): Settings => {
         behaviorConfig: {
             violations: parsed.behaviorConfig?.violations || defaultSettings.behaviorConfig.violations,
             positives: parsed.behaviorConfig?.positives || defaultSettings.behaviorConfig.positives
-        }
+        },
+        lockedWeeks: parsed.lockedWeeks || []
     };
   }
   return defaultSettings;
@@ -169,7 +171,7 @@ export const exportFullData = () => {
     settings: getSettings(),
     gasUrl: getGasUrl(),
     exportDate: new Date().toISOString(),
-    version: '1.5'
+    version: '1.7'
   };
   return JSON.stringify(data, null, 2);
 };
@@ -218,9 +220,6 @@ export const uploadToCloud = async (): Promise<boolean> => {
 
     try {
         addLog('CLOUD', 'Đang gửi dữ liệu lên Google Sheets...');
-        // Use no-cors mode requires handling result differently, but simple POST usually works if GAS setup right.
-        // Actually, GAS webapp must return JSON and we fetch it.
-        // Important: POST requests to GAS might trigger CORS. ContentService must serve text/plain or json.
         
         const response = await fetch(url, {
             method: 'POST',
@@ -252,8 +251,6 @@ export const downloadFromCloud = async (): Promise<boolean> => {
     try {
         addLog('CLOUD', 'Đang tải dữ liệu từ Google Sheets...');
         
-        // GAS often handles POST better for commands than GET if we want a body, 
-        // but here we just want to load. Let's send a load action via POST to be safe with body parsing.
         const response = await fetch(url, {
             method: 'POST',
             body: JSON.stringify({ action: 'load' })
