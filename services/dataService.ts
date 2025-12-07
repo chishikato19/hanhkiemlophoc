@@ -55,7 +55,8 @@ export const seedData = () => {
     name: `Học sinh ${i + 1}`,
     gender: i % 2 === 0 ? Gender.MALE : Gender.FEMALE,
     rank: i < 10 ? AcademicRank.GOOD : i < 25 ? AcademicRank.FAIR : i < 35 ? AcademicRank.PASS : AcademicRank.FAIL,
-    isTalkative: i % 5 === 0 // Every 5th student is talkative
+    isTalkative: i % 5 === 0, // Every 5th student is talkative
+    isActive: true // Default active
   }));
 
   const conduct: ConductRecord[] = [];
@@ -88,7 +89,9 @@ export const seedData = () => {
 
 // --- Students ---
 export const getStudents = (): Student[] => {
-  return JSON.parse(localStorage.getItem(KEY_STUDENTS) || '[]');
+  const raw = JSON.parse(localStorage.getItem(KEY_STUDENTS) || '[]');
+  // Migration: Ensure isActive exists
+  return raw.map((s: any) => ({ ...s, isActive: s.isActive !== undefined ? s.isActive : true }));
 };
 
 export const saveStudents = (students: Student[]) => {
