@@ -3,11 +3,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getLogs, clearLogs } from '../utils/logger';
 import { LogEntry } from '../types';
 import { seedData, getGasUrl, saveGasUrl, exportFullData, importFullData } from '../services/dataService';
-import { Bug, Database, Book, History, GitCommit, Download, Upload, Link, Save, Cloud } from 'lucide-react';
+import { Bug, Database, Book, History, GitCommit, Download, Upload, Link, Save, Cloud, Info } from 'lucide-react';
 
 const Documentation: React.FC = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [activeSubTab, setActiveSubTab] = useState<'log' | 'guide' | 'data' | 'version'>('guide');
+  const [activeSubTab, setActiveSubTab] = useState<'log' | 'guide' | 'manual' | 'data' | 'version'>('manual');
   
   // GAS URL State
   const [gasUrl, setGasUrl] = useState('');
@@ -66,22 +66,28 @@ const Documentation: React.FC = () => {
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="flex gap-4 mb-6 border-b pb-2 overflow-x-auto">
         <button 
+            onClick={() => setActiveSubTab('manual')}
+            className={`px-4 py-2 font-medium rounded-t-lg whitespace-nowrap ${activeSubTab === 'manual' ? 'bg-white text-indigo-600 border border-b-0' : 'text-gray-500 hover:text-indigo-600'}`}
+        >
+            Hướng dẫn Sử dụng
+        </button>
+        <button 
             onClick={() => setActiveSubTab('guide')}
             className={`px-4 py-2 font-medium rounded-t-lg whitespace-nowrap ${activeSubTab === 'guide' ? 'bg-white text-indigo-600 border border-b-0' : 'text-gray-500 hover:text-indigo-600'}`}
         >
-            Hướng dẫn sử dụng
+            Kết nối Online
         </button>
         <button 
             onClick={() => setActiveSubTab('version')}
             className={`px-4 py-2 font-medium rounded-t-lg whitespace-nowrap ${activeSubTab === 'version' ? 'bg-white text-indigo-600 border border-b-0' : 'text-gray-500 hover:text-indigo-600'}`}
         >
-            Phiên bản & Cập nhật
+            Lịch sử Cập nhật
         </button>
         <button 
             onClick={() => setActiveSubTab('data')}
             className={`px-4 py-2 font-medium rounded-t-lg whitespace-nowrap ${activeSubTab === 'data' ? 'bg-white text-indigo-600 border border-b-0' : 'text-gray-500 hover:text-indigo-600'}`}
         >
-            Dữ liệu & Kết nối
+            Dữ liệu (Backup)
         </button>
         <button 
             onClick={() => setActiveSubTab('log')}
@@ -116,9 +122,64 @@ const Documentation: React.FC = () => {
             </div>
         )}
 
+        {activeSubTab === 'manual' && (
+             <div className="prose max-w-none text-gray-700">
+                <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-indigo-700"><Book size={24}/> Hướng dẫn sử dụng phần mềm</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Module 1: Students */}
+                    <div className="bg-gray-50 p-5 rounded-xl border">
+                        <h4 className="font-bold text-lg mb-2 text-indigo-600">1. Quản lý Học sinh</h4>
+                        <ul className="list-disc list-inside text-sm space-y-2">
+                            <li><strong>Thêm mới:</strong> Nhập tên, giới tính, học lực và nhấn nút "Thêm".</li>
+                            <li><strong>Sửa thông tin:</strong> Nhấn biểu tượng Bút chì ở danh sách để sửa.</li>
+                            <li><strong>Nhập từ Excel:</strong> 
+                                <ol className="list-decimal list-inside ml-4 text-xs mt-1 text-gray-600">
+                                    <li>Chuẩn bị file Excel với các cột: Tên | Giới tính | Học lực | Hay nói chuyện.</li>
+                                    <li>Copy dữ liệu (Ctrl+C).</li>
+                                    <li>Nhấn nút <strong>Import Excel</strong> trên phần mềm và dán (Ctrl+V) vào ô trống.</li>
+                                </ol>
+                            </li>
+                        </ul>
+                    </div>
+
+                    {/* Module 2: Conduct */}
+                    <div className="bg-gray-50 p-5 rounded-xl border">
+                        <h4 className="font-bold text-lg mb-2 text-indigo-600">2. Quản lý Hạnh kiểm</h4>
+                        <ul className="list-disc list-inside text-sm space-y-2">
+                            <li><strong>Nhập liệu:</strong> Chọn Tuần, sau đó nhập điểm số hoặc chọn các lỗi vi phạm/điểm cộng.</li>
+                            <li><strong>Khóa tuần:</strong> Nhấn nút "Khóa" để ngăn không cho chỉnh sửa nhầm dữ liệu các tuần cũ.</li>
+                            <li><strong>Cộng/Trừ cả lớp:</strong> Dùng nút ở thanh công cụ để thưởng/phạt tập thể.</li>
+                            <li><strong>Cấu hình:</strong> Vào mục Cấu hình để thêm bớt các lỗi vi phạm, thang điểm, và mốc thời gian học kỳ.</li>
+                        </ul>
+                    </div>
+
+                    {/* Module 3: Reports */}
+                    <div className="bg-gray-50 p-5 rounded-xl border">
+                        <h4 className="font-bold text-lg mb-2 text-indigo-600">3. Báo cáo & Thống kê</h4>
+                        <ul className="list-disc list-inside text-sm space-y-2">
+                            <li><strong>Báo cáo Tuần:</strong> Xem tổng hợp điểm và xếp loại hạnh kiểm của cả lớp trong 1 tuần. Có thể xuất ảnh để gửi Zalo.</li>
+                            <li><strong>Báo cáo Chi tiết:</strong> Nhấn vào tên học sinh trong bảng tổng hợp để xem chi tiết biểu đồ tiến bộ và lỗi vi phạm qua các tuần.</li>
+                            <li><strong>Tổng kết Học kỳ:</strong> Chọn tab "Tổng kết Học kỳ" để xem điểm trung bình và xếp loại theo HK1, HK2 hoặc Cả năm.</li>
+                        </ul>
+                    </div>
+
+                    {/* Module 4: Seating */}
+                    <div className="bg-gray-50 p-5 rounded-xl border">
+                        <h4 className="font-bold text-lg mb-2 text-indigo-600">4. Sơ đồ Lớp học</h4>
+                        <ul className="list-disc list-inside text-sm space-y-2">
+                            <li><strong>Tự động xếp:</strong> Nhấn nút để máy tính tự sắp xếp sao cho cân bằng học lực giữa các nhóm.</li>
+                            <li><strong>Thủ công:</strong> Kéo thả tên học sinh từ chỗ này sang chỗ khác.</li>
+                            <li><strong>Lưu ý:</strong> Sơ đồ tự động lưu khi bạn thay đổi.</li>
+                        </ul>
+                    </div>
+                </div>
+             </div>
+        )}
+
         {activeSubTab === 'guide' && (
             <div className="prose max-w-none text-gray-700">
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Book size={24}/> Hướng dẫn Kết nối Google Sheets</h3>
+                <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Cloud size={24}/> Hướng dẫn Kết nối Google Sheets</h3>
                 
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 text-sm">
                     <p>Để lưu dữ liệu online và dùng trên nhiều máy, hãy làm theo các bước sau:</p>
@@ -139,7 +200,7 @@ const Documentation: React.FC = () => {
 
                 <h4 className="font-bold mt-4">Bước 3: Dán mã kết nối</h4>
                 <ol className="list-decimal ml-5 space-y-1">
-                    <li>Copy <strong>TOÀN BỘ</strong> đoạn mã trong khung màu đen ở tab <strong>"Dữ liệu & Kết nối"</strong> bên cạnh.</li>
+                    <li>Copy <strong>TOÀN BỘ</strong> đoạn mã trong khung màu đen ở tab <strong>"Dữ liệu (Backup)"</strong> bên cạnh.</li>
                     <li>Quay lại tab Apps Script, xóa hết nội dung cũ trong file <code>Code.gs</code>.</li>
                     <li>Dán đoạn mã vừa copy vào. Nhấn <strong>Lưu</strong> (biểu tượng đĩa mềm).</li>
                 </ol>
@@ -161,7 +222,7 @@ const Documentation: React.FC = () => {
 
                 <h4 className="font-bold mt-4">Bước 5: Kết nối vào App</h4>
                 <ol className="list-decimal ml-5 space-y-1">
-                    <li>Quay lại App này, vào tab <strong>"Dữ liệu & Kết nối"</strong>.</li>
+                    <li>Quay lại App này, vào tab <strong>"Dữ liệu (Backup)"</strong> (Phần Kết nối Google Sheets).</li>
                     <li>Dán URL vào ô nhập liệu và nhấn <strong>Lưu</strong>.</li>
                     <li>Bây giờ bạn có thể dùng nút <strong>Sync</strong> (Đám mây) hoặc nút <strong>Lưu & Sync</strong> ở màn hình Hạnh kiểm.</li>
                 </ol>
@@ -173,17 +234,29 @@ const Documentation: React.FC = () => {
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-indigo-700"><History size={24}/> Lịch sử Cập nhật</h3>
                 
                 <div className="relative border-l-2 border-indigo-200 ml-3 space-y-8 pl-6 py-2">
-                     {/* v1.7 */}
+                     {/* v1.8 */}
                     <div className="relative">
                         <span className="absolute -left-[33px] bg-indigo-600 text-white rounded-full p-1.5 ring-4 ring-indigo-50"><GitCommit size={16}/></span>
-                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 1.7 (Mới nhất)</h4>
-                        <span className="text-xs text-gray-500 font-mono">Current Build</span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 1.8 (Mới nhất)</h4>
+                        <span className="text-xs text-gray-500 font-mono">Build hiện tại</span>
                         <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
-                            <li><strong>Khóa/Mở khóa tuần:</strong> Ngăn chặn chỉnh sửa nhầm dữ liệu các tuần cũ.</li>
-                            <li><strong>Nút Lưu nhanh:</strong> Thêm nút "Lưu & Sync" ngay tại màn hình nhập liệu.</li>
-                            <li><strong>Cảnh báo chưa lưu:</strong> Hiển thị cảnh báo khi chuyển trang nếu chưa lưu dữ liệu mới.</li>
-                            <li><strong>Xuất ảnh Cả lớp:</strong> Xuất bảng tổng hợp tuần của cả lớp ra file ảnh.</li>
-                            <li><strong>Trừ điểm cả lớp:</strong> Thêm nút trừ điểm tập thể.</li>
+                            <li><strong>Báo cáo Chi tiết:</strong> Xem chi tiết học sinh trực tiếp từ bảng tổng hợp.</li>
+                            <li><strong>Tổng kết Học kỳ:</strong> Hỗ trợ tính điểm HK1, HK2 và Cả năm.</li>
+                            <li><strong>Cập nhật giao diện:</strong> Hiển thị xếp loại trong các bảng báo cáo.</li>
+                            <li><strong>Hướng dẫn sử dụng:</strong> Bổ sung tài liệu hướng dẫn chi tiết các tính năng.</li>
+                        </ul>
+                    </div>
+
+                     {/* v1.7 */}
+                    <div className="relative">
+                        <span className="absolute -left-[33px] bg-gray-200 text-gray-500 rounded-full p-1.5"><GitCommit size={16}/></span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 1.7</h4>
+                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
+                            <li><strong>Khóa/Mở khóa tuần:</strong> Ngăn chặn chỉnh sửa nhầm dữ liệu.</li>
+                            <li><strong>Nút Lưu nhanh:</strong> Thêm nút "Lưu & Sync" tiện lợi.</li>
+                            <li><strong>Cảnh báo chưa lưu:</strong> Nhắc nhở khi chuyển trang mà quên lưu.</li>
+                            <li><strong>Xuất ảnh Cả lớp:</strong> Báo cáo tuần dạng ảnh cho toàn bộ lớp.</li>
+                            <li><strong>Trừ điểm cả lớp:</strong> Tính năng phạt tập thể.</li>
                         </ul>
                     </div>
 
@@ -192,8 +265,9 @@ const Documentation: React.FC = () => {
                         <span className="absolute -left-[33px] bg-gray-200 text-gray-500 rounded-full p-1.5"><GitCommit size={16}/></span>
                         <h4 className="font-bold text-lg text-gray-800">Phiên bản 1.6</h4>
                         <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
-                            <li><strong>Đồng bộ Google Sheets 2 chiều:</strong> Upload và Download dữ liệu trọn vẹn.</li>
-                            <li><strong>Xuất Phiếu Liên Lạc:</strong> Tạo ảnh phiếu điểm tuần đẹp mắt.</li>
+                            <li><strong>Đồng bộ Google Sheets 2 chiều:</strong> Upload và Download dữ liệu.</li>
+                            <li><strong>Xuất Phiếu Liên Lạc:</strong> Tạo ảnh phiếu điểm tuần cá nhân.</li>
+                            <li><strong>Gửi Zalo nhanh:</strong> Tính năng copy ảnh vào clipboard.</li>
                         </ul>
                     </div>
 
@@ -202,8 +276,49 @@ const Documentation: React.FC = () => {
                         <span className="absolute -left-[33px] bg-gray-200 text-gray-500 rounded-full p-1.5"><GitCommit size={16}/></span>
                         <h4 className="font-bold text-lg text-gray-800">Phiên bản 1.5</h4>
                         <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
-                            <li>Thêm tính năng <strong>Sao lưu & Phục hồi</strong> dữ liệu qua file JSON.</li>
-                            <li>Bổ sung ô nhập <strong>Google Apps Script URL</strong>.</li>
+                            <li>Thêm tính năng <strong>Sao lưu & Phục hồi</strong> file JSON.</li>
+                            <li>Tích hợp mã Google Apps Script.</li>
+                        </ul>
+                    </div>
+
+                     {/* v1.4 */}
+                    <div className="relative">
+                        <span className="absolute -left-[33px] bg-gray-200 text-gray-500 rounded-full p-1.5"><GitCommit size={16}/></span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 1.4</h4>
+                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
+                            <li>Thêm cột <strong>Ghi chú</strong> cho mỗi học sinh.</li>
+                            <li>Cập nhật giao diện nhập liệu dạng bảng.</li>
+                        </ul>
+                    </div>
+
+                     {/* v1.3 */}
+                     <div className="relative">
+                        <span className="absolute -left-[33px] bg-gray-200 text-gray-500 rounded-full p-1.5"><GitCommit size={16}/></span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 1.3</h4>
+                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
+                            <li><strong>Cộng điểm cả lớp:</strong> Thưởng điểm tập thể.</li>
+                            <li>Hiển thị tên học sinh trực tiếp trên sơ đồ lớp.</li>
+                        </ul>
+                    </div>
+
+                     {/* v1.2 */}
+                     <div className="relative">
+                        <span className="absolute -left-[33px] bg-gray-200 text-gray-500 rounded-full p-1.5"><GitCommit size={16}/></span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 1.2</h4>
+                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
+                            <li><strong>Cấu hình Hạnh kiểm:</strong> Tùy chỉnh danh mục lỗi và điểm số.</li>
+                            <li>Cập nhật thuật toán xếp chỗ ngồi (Fix lỗi hiển thị).</li>
+                        </ul>
+                    </div>
+
+                    {/* v1.1 */}
+                    <div className="relative">
+                        <span className="absolute -left-[33px] bg-gray-200 text-gray-500 rounded-full p-1.5"><GitCommit size={16}/></span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 1.1</h4>
+                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
+                            <li>Bổ sung tính năng nhập học sinh bằng cách dán từ Excel.</li>
+                            <li>Thêm biểu đồ tròn thống kê hạnh kiểm.</li>
+                            <li>Bộ chọn lỗi vi phạm nâng cao (số lượng x1, x2).</li>
                         </ul>
                     </div>
                 </div>
