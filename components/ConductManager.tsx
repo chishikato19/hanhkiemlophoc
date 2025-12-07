@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Student, ConductRecord, Settings, AcademicRank, BehaviorItem } from '../types';
-import { getStudents, getConductRecords, saveConductRecords, getSettings, saveSettings } from '../services/dataService';
-import { Settings as SettingsIcon, AlertTriangle, Calendar, User, CheckSquare, PlusCircle, X, Search, FileText, PieChart as PieChartIcon, LayoutList, ThumbsUp, Star, Trash2, Plus, MinusCircle, StickyNote, Download, ImageIcon, ArrowLeft, Copy } from 'lucide-react';
+import { getStudents, getConductRecords, saveConductRecords, getSettings, saveSettings, uploadToCloud } from '../services/dataService';
+import { Settings as SettingsIcon, AlertTriangle, Calendar, User, CheckSquare, PlusCircle, X, Search, FileText, PieChart as PieChartIcon, LayoutList, ThumbsUp, Star, Trash2, Plus, MinusCircle, StickyNote, Download, ImageIcon, ArrowLeft, Copy, Lock, Unlock, Save, CloudUpload, ThumbsDown } from 'lucide-react';
 import { addLog } from '../utils/logger';
 
 // --- Constants ---
@@ -19,7 +19,8 @@ const TagSelector: React.FC<{
     onChange: (label: string, points: number, delta: number) => void;
     placeholder?: string;
     isPositive?: boolean;
-}> = ({ selectedTags, availableItems, onChange, placeholder = "...", isPositive = false }) => {
+    disabled?: boolean;
+}> = ({ selectedTags, availableItems, onChange, placeholder = "...", isPositive = false, disabled = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -40,6 +41,18 @@ const TagSelector: React.FC<{
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [wrapperRef]);
+
+    if (disabled) {
+        return (
+             <div className="flex flex-wrap gap-1 min-h-[28px] items-center opacity-60">
+                 {Object.entries(counts).map(([tag, count], idx) => (
+                    <span key={idx} className={`text-xs px-1.5 py-0.5 rounded border font-medium flex items-center gap-1 ${isPositive ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                        {tag} {(count as number) > 1 && <span className="bg-white bg-opacity-50 px-1 rounded-full text-[10px]">x{count}</span>}
+                    </span>
+                 ))}
+             </div>
+        )
+    }
 
     return (
         <div className="relative w-full" ref={wrapperRef}>
@@ -455,7 +468,11 @@ const StudentDetailModal: React.FC<{
 };
 
 // --- Main Component ---
-const ConductManager: React.FC = () => {
+interface Props {
+    setHasUnsavedChanges: (val: boolean) => void;
+}
+
+const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [records, setRecords] = useState<ConductRecord[]>([]);
   const [settings, setSettings] = useState<Settings>(getSettings());
@@ -478,11 +495,19 @@ const ConductManager: React.FC = () => {
   const [newBehaviorLabel, setNewBehaviorLabel] = useState('');
   const [newBehaviorPoints, setNewBehaviorPoints] = useState(0);
 
+  // Refs for Class Export
+  const classReportRef = useRef<HTMLDivElement>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
   useEffect(() => {
     setStudents(getStudents());
     setRecords(getConductRecords());
     setSettings(getSettings());
   }, []);
+
+  const isLocked = useMemo(() => {
+      return settings.lockedWeeks?.includes(selectedWeek);
+  }, [settings.lockedWeeks, selectedWeek]);
 
   // Helpers
   const getWeekLabel = (weekNum: number) => {
@@ -516,17 +541,48 @@ const ConductManager: React.FC = () => {
   };
 
   // --- Handlers ---
+
+  const handleCloudSave = async () => {
+      if (window.confirm("Bạn có muốn Lưu và gửi dữ liệu lên Cloud ngay bây giờ không?")) {
+        setIsSaving(true);
+        const success = await uploadToCloud();
+        setIsSaving(false);
+        if (success) {
+            alert("Đã lưu dữ liệu thành công!");
+            setHasUnsavedChanges(false);
+        } else {
+            alert("Lưu thất bại. Dữ liệu vẫn được lưu trên máy này, nhưng chưa lên Cloud.");
+        }
+      }
+  };
+
+  const toggleLockWeek = () => {
+      let newLocked = settings.lockedWeeks ? [...settings.lockedWeeks] : [];
+      if (isLocked) {
+          if (!window.confirm(`Bạn có chắc chắn muốn MỞ KHÓA Tuần ${selectedWeek}? Dữ liệu có thể bị thay đổi.`)) return;
+          newLocked = newLocked.filter(w => w !== selectedWeek);
+      } else {
+          newLocked.push(selectedWeek);
+      }
+      const newSettings = { ...settings, lockedWeeks: newLocked };
+      setSettings(newSettings);
+      saveSettings(newSettings);
+  };
+
   const handleScoreChange = (studentId: string, week: number, val: string) => {
+    if (isLocked) return;
     const score = parseInt(val);
     if (isNaN(score)) return;
     updateRecord(studentId, week, { score });
   };
 
   const handleNoteChange = (studentId: string, week: number, val: string) => {
+    if (isLocked) return;
     updateRecord(studentId, week, { note: val });
   };
 
   const updateRecord = (studentId: string, week: number, updates: Partial<ConductRecord>) => {
+    if (isLocked) return;
     const existingIdx = records.findIndex(r => r.studentId === studentId && r.week === week);
     let newRecords = [...records];
     
@@ -546,10 +602,12 @@ const ConductManager: React.FC = () => {
     }
     setRecords(newRecords);
     saveConductRecords(newRecords);
+    setHasUnsavedChanges(true);
   };
 
   // Tag Handlers with Frequency
   const handleTagChange = (studentId: string, week: number, label: string, points: number, delta: number, isPositive: boolean) => {
+      if (isLocked) return;
       const rec = records.find(r => r.studentId === studentId && r.week === week);
       const currentList = isPositive ? (rec?.positiveBehaviors || []) : (rec?.violations || []);
       const currentScore = rec ? rec.score : settings.defaultScore;
@@ -580,6 +638,7 @@ const ConductManager: React.FC = () => {
   };
 
   const handleFillDefault = () => {
+      if (isLocked) return;
       if (!window.confirm(`Bạn có muốn điền điểm mặc định (${settings.defaultScore}) cho tất cả học sinh chưa có điểm trong Tuần ${selectedWeek}?`)) return;
       
       let newRecords = [...records];
@@ -601,11 +660,13 @@ const ConductManager: React.FC = () => {
       });
       setRecords(newRecords);
       saveConductRecords(newRecords);
+      setHasUnsavedChanges(true);
       addLog('CONDUCT', `Đã điền điểm mặc định cho ${count} học sinh tuần ${selectedWeek}.`);
   };
 
   const handleClassBonus = () => {
-      const bonusStr = prompt("Nhập số điểm muốn cộng cho cả lớp tuần này:", "5");
+      if (isLocked) return;
+      const bonusStr = prompt("Nhập số điểm muốn CỘNG cho cả lớp tuần này:", "5");
       if (!bonusStr) return;
       const bonus = parseInt(bonusStr);
       if (isNaN(bonus)) {
@@ -618,6 +679,28 @@ const ConductManager: React.FC = () => {
 
       if (!window.confirm(`Cộng ${bonus} điểm cho TOÀN BỘ học sinh tuần ${selectedWeek}?\nLý do: ${reason}`)) return;
 
+      applyClassScoreChange(bonus, reason, true);
+  };
+
+  const handleClassPenalty = () => {
+      if (isLocked) return;
+      const penaltyStr = prompt("Nhập số điểm muốn TRỪ cho cả lớp tuần này:", "2");
+      if (!penaltyStr) return;
+      const penalty = parseInt(penaltyStr);
+      if (isNaN(penalty)) {
+          alert("Vui lòng nhập số!");
+          return;
+      }
+
+      const reason = prompt("Lý do trừ điểm (VD: Vệ sinh bẩn):", "Vi phạm tập thể");
+      if (!reason) return;
+
+      if (!window.confirm(`Trừ ${penalty} điểm cho TOÀN BỘ học sinh tuần ${selectedWeek}?\nLý do: ${reason}`)) return;
+
+      applyClassScoreChange(penalty, reason, false);
+  };
+
+  const applyClassScoreChange = (amount: number, reason: string, isBonus: boolean) => {
       const newRecords = [...records];
       let count = 0;
       
@@ -628,21 +711,30 @@ const ConductManager: React.FC = () => {
           if (idx > -1) {
               // Update existing record
               record = { ...newRecords[idx] };
-              record.score = Math.min(100, record.score + bonus);
-              // Add reason to positive behaviors if not already identical (to avoid spamming, but allow x2 if needed)
-              const newPositives = [...(record.positiveBehaviors || [])];
-              newPositives.push(`${reason} (+${bonus}đ)`);
-              record.positiveBehaviors = newPositives;
+              record.score = isBonus 
+                ? Math.min(100, record.score + amount) 
+                : Math.max(0, record.score - amount);
+
+              if (isBonus) {
+                  const newPositives = [...(record.positiveBehaviors || [])];
+                  newPositives.push(`${reason} (+${amount}đ)`);
+                  record.positiveBehaviors = newPositives;
+              } else {
+                  const newViolations = [...(record.violations || [])];
+                  newViolations.push(`${reason} (-${amount}đ)`);
+                  record.violations = newViolations;
+              }
               newRecords[idx] = record;
           } else {
                // Create new record
+               const baseScore = settings.defaultScore;
                newRecords.push({
                    id: `CON-${s.id}-W${selectedWeek}`,
                    studentId: s.id,
                    week: selectedWeek,
-                   score: Math.min(100, settings.defaultScore + bonus),
-                   violations: [],
-                   positiveBehaviors: [`${reason} (+${bonus}đ)`],
+                   score: isBonus ? Math.min(100, baseScore + amount) : Math.max(0, baseScore - amount),
+                   violations: isBonus ? [] : [`${reason} (-${amount}đ)`],
+                   positiveBehaviors: isBonus ? [`${reason} (+${amount}đ)`] : [],
                    note: ''
                });
           }
@@ -651,7 +743,23 @@ const ConductManager: React.FC = () => {
       
       setRecords(newRecords);
       saveConductRecords(newRecords);
-      addLog('CONDUCT', `Đã cộng ${bonus} điểm cho ${count} học sinh tuần ${selectedWeek}. Lý do: ${reason}`);
+      setHasUnsavedChanges(true);
+      addLog('CONDUCT', `Đã ${isBonus ? 'cộng' : 'trừ'} ${amount} điểm cho ${count} học sinh tuần ${selectedWeek}.`);
+  };
+
+  const exportClassImage = async () => {
+      if (!classReportRef.current) return;
+      try {
+          const canvas = await html2canvas(classReportRef.current, { scale: 1.5, useCORS: true });
+          const image = canvas.toDataURL("image/png");
+          const link = document.createElement("a");
+          link.href = image;
+          link.download = `BaoCaoLop_Tuan${selectedWeek}.png`;
+          link.click();
+      } catch (e) {
+          console.error(e);
+          alert("Lỗi khi xuất ảnh. Vui lòng thử lại.");
+      }
   };
 
   const updateSettings = (partialSettings: any) => {
@@ -976,49 +1084,77 @@ const ConductManager: React.FC = () => {
                     onClick={() => setViewMode('stats')}
                     className={`px-3 py-1 text-sm rounded-full font-medium transition-colors ${viewMode === 'stats' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
                 >
-                    <PieChartIcon size={14} className="inline mr-1"/> Thống kê
+                    <PieChartIcon size={14} className="inline mr-1"/> Thống kê & Báo cáo
                 </button>
             </div>
         </div>
-        <button onClick={() => setShowSettings(true)} className="flex items-center gap-2 text-gray-600 bg-white border px-3 py-2 rounded hover:bg-gray-100 shadow-sm">
-            <SettingsIcon size={18} /> Cấu hình
-        </button>
+        <div className="flex items-center gap-2">
+            <button 
+                onClick={handleCloudSave}
+                disabled={isSaving}
+                className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 font-bold"
+            >
+                {isSaving ? 'Đang lưu...' : <><CloudUpload size={18} /> Lưu & Sync</>}
+            </button>
+            <button onClick={() => setShowSettings(true)} className="flex items-center gap-2 text-gray-600 bg-white border px-3 py-2 rounded hover:bg-gray-100 shadow-sm">
+                <SettingsIcon size={18} /> Cấu hình
+            </button>
+        </div>
       </div>
 
       {/* === INPUT MODE === */}
       {viewMode === 'input' && (
           <div className="bg-white rounded-xl shadow overflow-hidden flex flex-col h-[calc(100vh-180px)]">
              <div className="p-4 border-b bg-gray-50 flex flex-wrap gap-4 items-center justify-between sticky top-0 z-10">
-                <div className="flex items-center gap-2">
-                    <Calendar size={18} className="text-gray-500"/>
-                    <select 
-                        value={selectedWeek} 
-                        onChange={(e) => setSelectedWeek(parseInt(e.target.value))}
-                        className="border border-gray-300 rounded px-2 py-1.5 font-medium text-gray-700 bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <Calendar size={18} className="text-gray-500"/>
+                        <select 
+                            value={selectedWeek} 
+                            onChange={(e) => setSelectedWeek(parseInt(e.target.value))}
+                            className="border border-gray-300 rounded px-2 py-1.5 font-medium text-gray-700 bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                        >
+                            {Array.from({length: 35}).map((_, i) => (
+                                <option key={i+1} value={i+1}>{getWeekLabel(i+1)}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <button 
+                        onClick={toggleLockWeek}
+                        className={`flex items-center gap-1 text-sm px-2 py-1 rounded font-medium ${isLocked ? 'bg-red-100 text-red-700' : 'bg-gray-200 text-gray-600'}`}
+                        title={isLocked ? "Mở khóa tuần này" : "Khóa tuần này để tránh sửa đổi"}
                     >
-                        {Array.from({length: 35}).map((_, i) => (
-                            <option key={i+1} value={i+1}>{getWeekLabel(i+1)}</option>
-                        ))}
-                    </select>
+                        {isLocked ? <><Lock size={14}/> Đã khóa</> : <><Unlock size={14}/> Mở khóa</>}
+                    </button>
                 </div>
                 
-                <div className="flex gap-2">
-                    <button 
-                        onClick={handleClassBonus}
-                        className="flex items-center gap-2 text-sm bg-blue-100 text-blue-700 px-3 py-1.5 rounded hover:bg-blue-200 font-medium"
-                    >
-                        <Star size={16}/> Cộng điểm cả lớp
-                    </button>
-                    <button 
-                        onClick={handleFillDefault}
-                        className="flex items-center gap-2 text-sm bg-green-100 text-green-700 px-3 py-1.5 rounded hover:bg-green-200 font-medium"
-                    >
-                        <CheckSquare size={16}/> Điền điểm mặc định
-                    </button>
-                </div>
+                {!isLocked && (
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={handleClassBonus}
+                            className="flex items-center gap-2 text-sm bg-blue-100 text-blue-700 px-3 py-1.5 rounded hover:bg-blue-200 font-medium"
+                        >
+                            <Star size={16}/> Cộng cả lớp
+                        </button>
+                        <button 
+                            onClick={handleClassPenalty}
+                            className="flex items-center gap-2 text-sm bg-red-100 text-red-700 px-3 py-1.5 rounded hover:bg-red-200 font-medium"
+                        >
+                            <ThumbsDown size={16}/> Trừ cả lớp
+                        </button>
+                        <button 
+                            onClick={handleFillDefault}
+                            className="flex items-center gap-2 text-sm bg-green-100 text-green-700 px-3 py-1.5 rounded hover:bg-green-200 font-medium"
+                        >
+                            <CheckSquare size={16}/> Điền mặc định
+                        </button>
+                    </div>
+                )}
              </div>
 
-             <div className="flex-1 overflow-auto">
+             <div className="flex-1 overflow-auto relative">
+                {isLocked && <div className="absolute inset-0 bg-gray-100 bg-opacity-20 pointer-events-none z-0"></div>}
                 <table className="w-full text-left text-sm border-collapse">
                     <thead className="bg-gray-100 sticky top-0 z-10 shadow-sm text-gray-600 font-semibold">
                         <tr>
@@ -1054,8 +1190,10 @@ const ConductManager: React.FC = () => {
                                             placeholder={settings.defaultScore.toString()}
                                             value={score} 
                                             onChange={(e) => handleScoreChange(s.id, selectedWeek, e.target.value)}
+                                            disabled={isLocked}
                                             className={`w-14 border rounded p-1 text-center font-bold outline-none focus:ring-2 focus:ring-indigo-500
-                                                ${rec && rec.score < settings.thresholds.pass ? 'text-red-600 bg-red-50 border-red-200' : 'text-gray-700'}`}
+                                                ${rec && rec.score < settings.thresholds.pass ? 'text-red-600 bg-red-50 border-red-200' : 'text-gray-700'}
+                                                ${isLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                         />
                                     </td>
                                     <td className="p-3 text-center">
@@ -1075,6 +1213,7 @@ const ConductManager: React.FC = () => {
                                             onChange={(label, points, delta) => handleTagChange(s.id, selectedWeek, label, points, delta, false)}
                                             placeholder="..."
                                             isPositive={false}
+                                            disabled={isLocked}
                                         />
                                     </td>
                                     <td className="p-3 border-l border-gray-100 align-top">
@@ -1084,15 +1223,17 @@ const ConductManager: React.FC = () => {
                                             onChange={(label, points, delta) => handleTagChange(s.id, selectedWeek, label, points, delta, true)}
                                             placeholder="..."
                                             isPositive={true}
+                                            disabled={isLocked}
                                         />
                                     </td>
                                     <td className="p-3 border-l border-gray-100 align-top">
                                         <input
                                             type="text"
-                                            className="w-full border-b border-gray-200 focus:border-indigo-500 outline-none text-sm py-1 bg-transparent text-gray-600 placeholder-gray-300"
+                                            className={`w-full border-b border-gray-200 focus:border-indigo-500 outline-none text-sm py-1 bg-transparent text-gray-600 placeholder-gray-300 ${isLocked ? 'cursor-not-allowed' : ''}`}
                                             placeholder="Thêm ghi chú..."
                                             value={rec?.note || ''}
                                             onChange={(e) => handleNoteChange(s.id, selectedWeek, e.target.value)}
+                                            disabled={isLocked}
                                         />
                                     </td>
                                 </tr>
@@ -1169,57 +1310,73 @@ const ConductManager: React.FC = () => {
 
                   {statsTab === 'week-report' && (
                       <div>
-                          <div className="mb-4 flex items-center gap-2">
-                              <label className="font-bold">Chọn tuần xem báo cáo:</label>
-                              <select 
-                                value={selectedWeek} 
-                                onChange={(e) => setSelectedWeek(parseInt(e.target.value))}
-                                className="border rounded px-2 py-1"
+                          <div className="mb-4 flex items-center justify-between bg-gray-50 p-3 rounded">
+                              <div className="flex items-center gap-2">
+                                <label className="font-bold">Chọn tuần xem báo cáo:</label>
+                                <select 
+                                    value={selectedWeek} 
+                                    onChange={(e) => setSelectedWeek(parseInt(e.target.value))}
+                                    className="border rounded px-2 py-1"
+                                >
+                                    {Array.from({length: 35}).map((_, i) => (
+                                        <option key={i+1} value={i+1}>{getWeekLabel(i+1)}</option>
+                                    ))}
+                                </select>
+                              </div>
+                              <button 
+                                onClick={exportClassImage}
+                                className="bg-indigo-600 text-white px-3 py-1.5 rounded text-sm flex items-center gap-2 hover:bg-indigo-700"
                               >
-                                {Array.from({length: 35}).map((_, i) => (
-                                    <option key={i+1} value={i+1}>{getWeekLabel(i+1)}</option>
-                                ))}
-                            </select>
+                                  <ImageIcon size={16}/> Xuất ảnh cả lớp
+                              </button>
                           </div>
-                          <h3 className="text-xl font-bold text-center mb-6 uppercase text-indigo-800">Báo cáo Tuần {selectedWeek}</h3>
                           
-                          <div className="overflow-x-auto">
-                            <table className="w-full border-collapse border border-gray-200 text-sm">
-                                <thead className="bg-gray-100">
-                                    <tr>
-                                        <th className="border p-2">Học sinh</th>
-                                        <th className="border p-2 w-16">Điểm</th>
-                                        <th className="border p-2 w-1/4">Vi phạm</th>
-                                        <th className="border p-2 w-1/4">Hành vi tốt</th>
-                                        <th className="border p-2 w-1/4">Ghi chú</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {records
-                                        .filter(r => r.week === selectedWeek && (r.violations.length > 0 || (r.positiveBehaviors && r.positiveBehaviors.length > 0) || r.note))
-                                        .map(r => {
-                                            const stu = students.find(s => s.id === r.studentId);
+                          {/* Wrapper for Image Export */}
+                          <div ref={classReportRef} className="bg-white p-4">
+                            <div className="text-center mb-4">
+                                <h3 className="text-xl font-bold uppercase text-indigo-800">Báo cáo Tổng hợp Tuần {selectedWeek}</h3>
+                                <p className="text-sm text-gray-500 italic">{getWeekLabel(selectedWeek)}</p>
+                            </div>
+                            
+                            <div className="overflow-x-auto">
+                                <table className="w-full border-collapse border border-gray-200 text-sm">
+                                    <thead className="bg-gray-100">
+                                        <tr>
+                                            <th className="border p-2 w-10">STT</th>
+                                            <th className="border p-2">Học sinh</th>
+                                            <th className="border p-2 w-16">Điểm</th>
+                                            <th className="border p-2 w-1/4">Vi phạm</th>
+                                            <th className="border p-2 w-1/4">Hành vi tốt</th>
+                                            <th className="border p-2 w-1/4">Ghi chú</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {students.map((stu, index) => {
+                                            const r = records.find(rec => rec.studentId === stu.id && rec.week === selectedWeek);
+                                            // Show all students in the class report image, even if empty
                                             return (
-                                                <tr key={r.id}>
-                                                    <td className="border p-2 font-medium">{stu?.name}</td>
-                                                    <td className="border p-2 text-center text-red-600 font-bold">{r.score}</td>
-                                                    <td className="border p-2 text-red-700">
-                                                        {formatGroupedList(r.violations)}
+                                                <tr key={stu.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                    <td className="border p-2 text-center text-gray-500">{index + 1}</td>
+                                                    <td className="border p-2 font-medium">{stu.name}</td>
+                                                    <td className={`border p-2 text-center font-bold ${r ? (r.score < 50 ? 'text-red-600' : r.score < 80 ? 'text-yellow-600' : 'text-green-600') : 'text-gray-400'}`}>
+                                                        {r ? r.score : '-'}
                                                     </td>
-                                                    <td className="border p-2 text-green-700">
-                                                        {formatGroupedList(r.positiveBehaviors)}
+                                                    <td className="border p-2 text-red-700 text-xs">
+                                                        {r ? formatGroupedList(r.violations) : ''}
                                                     </td>
-                                                    <td className="border p-2 text-gray-600 italic">
-                                                        {r.note || '-'}
+                                                    <td className="border p-2 text-green-700 text-xs">
+                                                        {r ? formatGroupedList(r.positiveBehaviors) : ''}
+                                                    </td>
+                                                    <td className="border p-2 text-gray-600 italic text-xs">
+                                                        {r ? r.note : ''}
                                                     </td>
                                                 </tr>
                                             );
                                         })}
-                                    {records.filter(r => r.week === selectedWeek && (r.violations.length > 0 || (r.positiveBehaviors && r.positiveBehaviors.length > 0) || r.note)).length === 0 && (
-                                        <tr><td colSpan={5} className="p-8 text-center text-gray-500">Không có ghi nhận đặc biệt nào trong tuần này.</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="mt-4 text-right text-xs text-gray-400">Xuất từ Ứng dụng Lớp Học Thông Minh</div>
                           </div>
                       </div>
                   )}
