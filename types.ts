@@ -60,6 +60,7 @@ export interface Settings {
     violations: BehaviorItem[];
     positives: BehaviorItem[];
   };
+  lockedWeeks: number[]; // List of locked week numbers
 }
 
 export interface Seat {
