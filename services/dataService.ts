@@ -12,6 +12,7 @@ const KEY_GAS_URL = 'class_gas_url'; // New Key for Google Apps Script URL
 // Default Settings
 const defaultSettings: Settings = {
   semesterStartDate: new Date().toISOString().split('T')[0], // Today as default
+  semesterTwoStartWeek: 19, // Default start of Semester 2
   thresholds: { good: 80, fair: 65, pass: 50 },
   defaultScore: 100,
   rankScores: {
@@ -111,17 +112,18 @@ export const getSettings = (): Settings => {
   if (stored) {
     const parsed = JSON.parse(stored);
     
-    // Deep merge logic to ensure new fields (like behaviorConfig) exist if old data is present
+    // Deep merge logic
     return { 
         ...defaultSettings, 
         ...parsed,
-        rankScores: { ...defaultSettings.rankScores, ...parsed.rankScores },
-        semesterThresholds: { ...defaultSettings.semesterThresholds, ...parsed.semesterThresholds },
+        rankScores: { ...defaultSettings.rankScores, ...(parsed.rankScores || {}) },
+        semesterThresholds: { ...defaultSettings.semesterThresholds, ...(parsed.semesterThresholds || {}) },
         behaviorConfig: {
             violations: parsed.behaviorConfig?.violations || defaultSettings.behaviorConfig.violations,
             positives: parsed.behaviorConfig?.positives || defaultSettings.behaviorConfig.positives
         },
-        lockedWeeks: parsed.lockedWeeks || []
+        lockedWeeks: parsed.lockedWeeks || [],
+        semesterTwoStartWeek: parsed.semesterTwoStartWeek || defaultSettings.semesterTwoStartWeek
     };
   }
   return defaultSettings;
@@ -171,7 +173,7 @@ export const exportFullData = () => {
     settings: getSettings(),
     gasUrl: getGasUrl(),
     exportDate: new Date().toISOString(),
-    version: '1.7'
+    version: '1.8'
   };
   return JSON.stringify(data, null, 2);
 };
