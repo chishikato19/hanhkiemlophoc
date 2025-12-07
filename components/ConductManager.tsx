@@ -12,6 +12,19 @@ const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444']; // Good, Fair, Pass
 // Use global html2canvas
 declare const html2canvas: any;
 
+// --- Helper to format display text with points ---
+const formatItemWithPoints = (name: string, configItems: BehaviorItem[]) => {
+    // Check if name already has points format like "Reason (-2đ)" (from custom inputs)
+    if (name.match(/\([+-]?\d+đ\)/)) return name;
+
+    const item = configItems.find(i => i.label === name);
+    if (item) {
+        const sign = item.points > 0 ? '+' : '';
+        return `${name} (${sign}${item.points}đ)`;
+    }
+    return name;
+};
+
 // --- Tag Selector Component ---
 const TagSelector: React.FC<{
     selectedTags: string[]; // Array of strings (can contain duplicates for frequency)
@@ -68,7 +81,7 @@ const TagSelector: React.FC<{
              <div className="flex flex-wrap gap-1 min-h-[28px] items-center opacity-60">
                  {Object.entries(counts).map(([tag, count], idx) => (
                     <span key={idx} className={`text-xs px-1.5 py-0.5 rounded border font-medium flex items-center gap-1 ${isPositive ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
-                        {tag} {(count as number) > 1 && <span className="bg-white bg-opacity-50 px-1 rounded-full text-[10px]">x{count}</span>}
+                        {formatItemWithPoints(tag, availableItems)} {(count as number) > 1 && <span className="bg-white bg-opacity-50 px-1 rounded-full text-[10px]">x{count}</span>}
                     </span>
                  ))}
              </div>
@@ -87,7 +100,7 @@ const TagSelector: React.FC<{
                                 ${isPositive ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100' : 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100'}`}
                                 onClick={() => setIsOpen(!isOpen)}
                             >
-                                {tag} 
+                                {formatItemWithPoints(tag, availableItems)} 
                                 {(count as number) > 1 && <span className="bg-white bg-opacity-50 px-1 rounded-full text-[10px]">x{count}</span>}
                                 
                                 <button
@@ -192,12 +205,15 @@ const ReportCard: React.FC<{
     };
     const rank = record ? getRank(score) : 'Chưa có';
 
-    const formatGroupedList = (items: string[]) => {
+    const formatGroupedList = (items: string[], configItems: BehaviorItem[]) => {
         const counts = items.reduce((acc, item) => {
               acc[item] = (acc[item] || 0) + 1;
               return acc;
           }, {} as Record<string, number>);
-        return Object.entries(counts).map(([name, count]) => count > 1 ? `${name} (x${count})` : name);
+        return Object.entries(counts).map(([name, count]) => {
+            const displayName = formatItemWithPoints(name, configItems);
+            return count > 1 ? `${displayName} (x${count})` : displayName;
+        });
     };
 
     return (
@@ -256,7 +272,7 @@ const ReportCard: React.FC<{
                         <div>
                             <h4 className="font-bold text-red-600 flex items-center gap-1 mb-1 text-xs uppercase"><AlertTriangle size={12}/> Vi phạm cần khắc phục:</h4>
                             <ul className="list-disc list-inside bg-red-50 p-2 rounded text-red-800 border border-red-100 text-xs">
-                                {formatGroupedList(record.violations).map((v, i) => <li key={i}>{v}</li>)}
+                                {formatGroupedList(record.violations, settings.behaviorConfig.violations).map((v, i) => <li key={i}>{v}</li>)}
                             </ul>
                         </div>
                     )}
@@ -265,7 +281,7 @@ const ReportCard: React.FC<{
                         <div>
                             <h4 className="font-bold text-green-600 flex items-center gap-1 mb-1 text-xs uppercase"><ThumbsUp size={12}/> Lời khen / Điểm cộng:</h4>
                             <ul className="list-disc list-inside bg-green-50 p-2 rounded text-green-800 border border-green-100 text-xs">
-                                {formatGroupedList(record.positiveBehaviors).map((v, i) => <li key={i}>{v}</li>)}
+                                {formatGroupedList(record.positiveBehaviors, settings.behaviorConfig.positives).map((v, i) => <li key={i}>{v}</li>)}
                             </ul>
                         </div>
                     )}
@@ -311,12 +327,15 @@ const StudentDetailModal: React.FC<{
         : 0;
 
     // Helper to group counts
-    const getGroupedItems = (items: string[]) => {
+    const getGroupedItems = (items: string[], configItems: BehaviorItem[]) => {
         const counts = items.reduce((acc, item) => {
             acc[item] = (acc[item] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
-        return Object.entries(counts).map(([name, count]) => count > 1 ? `${name} (x${count})` : name);
+        return Object.entries(counts).map(([name, count]) => {
+             const displayName = formatItemWithPoints(name, configItems);
+             return count > 1 ? `${displayName} (x${count})` : displayName;
+        });
     };
 
     const handleDownloadImage = async () => {
@@ -426,7 +445,7 @@ const StudentDetailModal: React.FC<{
                                                     <span className="text-red-500 font-semibold block mb-1 text-xs uppercase">Vi phạm</span>
                                                     {r.violations.length > 0 ? (
                                                         <ul className="list-disc list-inside text-red-700 text-xs space-y-0.5">
-                                                            {getGroupedItems(r.violations).map((v, i) => <li key={i}>{v}</li>)}
+                                                            {getGroupedItems(r.violations, settings.behaviorConfig.violations).map((v, i) => <li key={i}>{v}</li>)}
                                                         </ul>
                                                     ) : <span className="text-gray-300 italic text-xs">Không có</span>}
                                                 </div>
@@ -434,7 +453,7 @@ const StudentDetailModal: React.FC<{
                                                     <span className="text-green-600 font-semibold block mb-1 text-xs uppercase">Hành vi tốt</span>
                                                     {r.positiveBehaviors && r.positiveBehaviors.length > 0 ? (
                                                         <ul className="list-disc list-inside text-green-700 text-xs space-y-0.5">
-                                                            {getGroupedItems(r.positiveBehaviors).map((v, i) => <li key={i}>{v}</li>)}
+                                                            {getGroupedItems(r.positiveBehaviors, settings.behaviorConfig.positives).map((v, i) => <li key={i}>{v}</li>)}
                                                         </ul>
                                                     ) : <span className="text-gray-300 italic text-xs">Không có</span>}
                                                 </div>
@@ -580,14 +599,17 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   };
 
   // Helper to format string array to grouped text for display (e.g. "Talk x2, Late")
-  const formatGroupedList = (items: string[]) => {
+  const formatGroupedList = (items: string[], configItems: BehaviorItem[]) => {
       if (!items || items.length === 0) return '';
       const counts = items.reduce((acc, item) => {
             acc[item] = (acc[item] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
       return Object.entries(counts)
-        .map(([name, count]) => count > 1 ? `${name} (x${count})` : name)
+        .map(([name, count]) => {
+            const displayName = formatItemWithPoints(name, configItems);
+            return count > 1 ? `${displayName} (x${count})` : displayName;
+        })
         .join(', ');
   };
 
@@ -1456,10 +1478,10 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                                                         {r && <span className={`text-xs font-bold px-1 rounded ${getRankColor(rank)}`}>{rank}</span>}
                                                     </td>
                                                     <td className="border p-2 text-red-700 text-xs">
-                                                        {r ? formatGroupedList(r.violations) : ''}
+                                                        {r ? formatGroupedList(r.violations, settings.behaviorConfig.violations) : ''}
                                                     </td>
                                                     <td className="border p-2 text-green-700 text-xs">
-                                                        {r ? formatGroupedList(r.positiveBehaviors) : ''}
+                                                        {r ? formatGroupedList(r.positiveBehaviors, settings.behaviorConfig.positives) : ''}
                                                     </td>
                                                     <td className="border p-2 text-gray-600 italic text-xs">
                                                         {r ? r.note : ''}
@@ -1527,8 +1549,8 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                                                                     <span className={`text-[10px] px-1 rounded ${getRankColor(getRankFromScore(r.score))}`}>{getRankFromScore(r.score)}</span>
                                                                </div>
                                                            </div>
-                                                           {r.violations.length > 0 && <div className="text-red-700 mb-1">- {formatGroupedList(r.violations)}</div>}
-                                                           {r.positiveBehaviors && r.positiveBehaviors.length > 0 && <div className="text-green-700">+ {formatGroupedList(r.positiveBehaviors)}</div>}
+                                                           {r.violations.length > 0 && <div className="text-red-700 mb-1">- {formatGroupedList(r.violations, settings.behaviorConfig.violations)}</div>}
+                                                           {r.positiveBehaviors && r.positiveBehaviors.length > 0 && <div className="text-green-700">+ {formatGroupedList(r.positiveBehaviors, settings.behaviorConfig.positives)}</div>}
                                                            {r.note && <div className="text-gray-500 italic mt-1 border-t pt-1">Ghi chú: {r.note}</div>}
                                                        </div>
                                                    ))}
