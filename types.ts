@@ -17,6 +17,7 @@ export interface Student {
   gender: Gender;
   rank: AcademicRank;
   isTalkative: boolean;
+  isActive?: boolean; // New field: true = studying, false = dropped out/locked
 }
 
 export interface ConductRecord {
