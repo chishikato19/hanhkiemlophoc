@@ -1,3 +1,4 @@
+
 import { Student, Seat, AcademicRank, ROWS, COLS } from '../types';
 import { addLog } from './logger';
 
@@ -17,33 +18,43 @@ export const autoArrangeSeating = (students: Student[]): Seat[] => {
   const fairStudents = students.filter(s => s.rank === AcademicRank.FAIR);
   const otherStudents = students.filter(s => s.rank !== AcademicRank.GOOD && s.rank !== AcademicRank.FAIR);
 
-  // Shuffle arrays to randomize within rank
+  // Shuffle arrays to randomize
   const shuffle = <T,>(array: T[]) => array.sort(() => Math.random() - 0.5);
   shuffle(goodStudents);
   shuffle(fairStudents);
   shuffle(otherStudents);
 
-  // 3. Define Groups (2x2 Blocks)
-  // Grid is 6 rows, 8 cols. 
-  // Left bank: Cols 0-3. Right bank: Cols 4-7.
-  // Group logic: (Row i, Col j), (Row i, Col j+1), (Row i+1, Col j), (Row i+1, Col j+1)
-  // Where j is 0, 2, 4, 6. And i is 0, 2, 4.
-  const groups: { id: string, seats: { r: number, c: number }[] }[] = [];
+  // 3. Define Zones (2x2 Blocks)
+  // Grid: 6 Rows x 8 Cols.
+  // We divide grid into 12 distinct 2x2 Zones.
+  // This approach strictly enforces distribution. 
+  // Each "Table" (Row 0-3 and Row 4-7) contains 2 Zones.
+  // By placing 1 Good Student in each Zone, we ensure each Group has one, 
+  // and consequently each Table (which is 2 groups) has 2 (or at least 1).
   
-  for (let r = 0; r < ROWS; r += 2) {
-    for (let c = 0; c < COLS; c += 2) {
-        // A 2x2 group
-        groups.push({
-            id: `G-${r}-${c}`,
-            seats: [
-                { r, c }, { r, c: c + 1 },
-                { r: r + 1, c }, { r: r + 1, c: c + 1 }
-            ]
-        });
-    }
+  interface Zone {
+      id: number;
+      seats: {r: number, c: number}[];
   }
 
-  // Helper to place student in a specific seat
+  const zones: Zone[] = [];
+  let zoneId = 0;
+
+  for (let r = 0; r < ROWS; r += 2) {
+      for (let c = 0; c < COLS; c += 2) {
+          zones.push({
+              id: zoneId++,
+              seats: [
+                  { r, c }, { r, c: c + 1 },
+                  { r: r + 1, c }, { r: r + 1, c: c + 1 }
+              ]
+          });
+      }
+  }
+
+  // Shuffle zones so we don't always fill top-left first
+  shuffle(zones);
+
   const placeStudent = (student: Student, r: number, c: number) => {
     const seatIndex = newSeats.findIndex(s => s.row === r && s.col === c);
     if (seatIndex !== -1 && newSeats[seatIndex].studentId === null) {
@@ -53,100 +64,73 @@ export const autoArrangeSeating = (students: Student[]): Seat[] => {
     return false;
   };
 
-  // 4. Distribute GOOD students
-  // Requirement: Ensure at least 1 Good per table (row-bank) and 1 per Group.
-  // Since Groups span 2 rows, placing 1 per group covers a lot, but we need to check rows.
-  
-  // Strategy: Place 1 Good student in each Group first.
+  // Helper to place a student into a specific Zone
+  const placeInZone = (student: Student, zone: Zone) => {
+      // Find empty seats in this zone
+      const availableSeats = zone.seats.filter(pos => {
+          const seat = newSeats.find(s => s.row === pos.r && s.col === pos.c);
+          return seat && seat.studentId === null;
+      });
+
+      if (availableSeats.length > 0) {
+          // Pick random seat in zone
+          const pick = availableSeats[Math.floor(Math.random() * availableSeats.length)];
+          return placeStudent(student, pick.r, pick.c);
+      }
+      return false;
+  };
+
+  // 4. Distribute GOOD Students
+  // Round-robin distribution into zones to ensure maximum spread
   let goodIdx = 0;
   
-  // First pass: 1 Good student per Group
-  for (const group of groups) {
-    if (goodIdx >= goodStudents.length) break;
-    // Pick a random seat in the group
-    const seat = group.seats[Math.floor(Math.random() * group.seats.length)];
-    if (placeStudent(goodStudents[goodIdx], seat.r, seat.c)) {
-        goodIdx++;
-    }
-  }
-
-  // Second pass: Ensure 1 Good student per Table (Row-Bank) if not already met
-  // Banks: Left (0-3), Right (4-7)
-  for (let r = 0; r < ROWS; r++) {
-      // Check Left Bank
-      let hasGoodLeft = false;
-      for(let c=0; c<4; c++) {
-          const sId = newSeats.find(s => s.row === r && s.col === c)?.studentId;
-          const stu = students.find(s => s.id === sId);
-          if (stu?.rank === AcademicRank.GOOD) hasGoodLeft = true;
-      }
-      if (!hasGoodLeft && goodIdx < goodStudents.length) {
-          // Find empty spot in this bank
-           for(let c=0; c<4; c++) {
-               if (placeStudent(goodStudents[goodIdx], r, c)) {
-                   goodIdx++;
-                   break;
-               }
-           }
-      }
-
-       // Check Right Bank
-      let hasGoodRight = false;
-      for(let c=4; c<8; c++) {
-          const sId = newSeats.find(s => s.row === r && s.col === c)?.studentId;
-          const stu = students.find(s => s.id === sId);
-          if (stu?.rank === AcademicRank.GOOD) hasGoodRight = true;
-      }
-      if (!hasGoodRight && goodIdx < goodStudents.length) {
-          // Find empty spot in this bank
-           for(let c=4; c<8; c++) {
-               if (placeStudent(goodStudents[goodIdx], r, c)) {
-                   goodIdx++;
-                   break;
-               }
-           }
+  // Pass 1: One Good student per Zone
+  for (const zone of zones) {
+      if (goodIdx < goodStudents.length) {
+          placeInZone(goodStudents[goodIdx], zone);
+          goodIdx++;
       }
   }
 
-  // Place remaining Good students randomly in empty spots
+  // Pass 2: If we still have Good students (more than 12), fill zones again
   while (goodIdx < goodStudents.length) {
-      const emptySeats = newSeats.filter(s => s.studentId === null);
-      if (emptySeats.length === 0) break;
-      const randomSeat = emptySeats[Math.floor(Math.random() * emptySeats.length)];
-      placeStudent(goodStudents[goodIdx], randomSeat.row, randomSeat.col);
-      goodIdx++;
+      // Find zones with most space? Or just random? 
+      // Let's iterate zones again
+      let placed = false;
+      for (const zone of zones) {
+           if (goodIdx < goodStudents.length) {
+               if (placeInZone(goodStudents[goodIdx], zone)) {
+                   goodIdx++;
+                   placed = true;
+               }
+           }
+      }
+      // If we couldn't place anyone in a full pass (grid full), break
+      if (!placed) break;
   }
 
-  // 5. Distribute FAIR students evenly across groups
-  // We want to balance the count of Good+Fair.
+  // 5. Distribute FAIR Students
+  // Try to place Fair students in zones that *don't* have them yet to balance
   let fairIdx = 0;
-  
-  // Iterate groups again to balance
-  for (const group of groups) {
-       // Count existing occupants
-       // Check available spots
-       const available = group.seats.filter(s => {
-           const seat = newSeats.find(ns => ns.row === s.r && ns.col === s.c);
-           return seat?.studentId === null;
-       });
-       
-       if (available.length > 0 && fairIdx < fairStudents.length) {
-           const pick = available[Math.floor(Math.random() * available.length)];
-           placeStudent(fairStudents[fairIdx], pick.r, pick.c);
-           fairIdx++;
-       }
+
+  // Pass 1: Try to place 1 Fair student in each zone
+  for (const zone of zones) {
+      if (fairIdx < fairStudents.length) {
+          placeInZone(fairStudents[fairIdx], zone);
+          fairIdx++;
+      }
   }
 
   // Fill remaining Fair students
   while (fairIdx < fairStudents.length) {
-    const emptySeats = newSeats.filter(s => s.studentId === null);
-    if (emptySeats.length === 0) break;
-    const randomSeat = emptySeats[Math.floor(Math.random() * emptySeats.length)];
-    placeStudent(fairStudents[fairIdx], randomSeat.row, randomSeat.col);
-    fairIdx++;
+      const emptySeats = newSeats.filter(s => s.studentId === null);
+      if (emptySeats.length === 0) break;
+      const randomSeat = emptySeats[Math.floor(Math.random() * emptySeats.length)];
+      placeStudent(fairStudents[fairIdx], randomSeat.row, randomSeat.col);
+      fairIdx++;
   }
 
-  // 6. Fill OTHERS
+  // 6. Fill Others
   let otherIdx = 0;
   while (otherIdx < otherStudents.length) {
     const emptySeats = newSeats.filter(s => s.studentId === null);
@@ -156,6 +140,6 @@ export const autoArrangeSeating = (students: Student[]): Seat[] => {
     otherIdx++;
   }
 
-  addLog('ALGORITHM', 'Hoàn tất xếp chỗ.');
+  addLog('ALGORITHM', 'Hoàn tất xếp chỗ (Thuật toán cân bằng nhóm).');
   return newSeats;
 };
