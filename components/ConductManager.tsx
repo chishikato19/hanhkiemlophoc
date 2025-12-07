@@ -507,6 +507,11 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
     setSettings(getSettings());
   }, []);
 
+  // Filter Active Students
+  const activeStudents = useMemo(() => {
+      return students.filter(s => s.isActive !== false);
+  }, [students]);
+
   const isLocked = useMemo(() => {
       return settings.lockedWeeks?.includes(selectedWeek);
   }, [settings.lockedWeeks, selectedWeek]);
@@ -654,7 +659,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       
       let newRecords = [...records];
       let count = 0;
-      students.forEach(s => {
+      activeStudents.forEach(s => {
           const exists = newRecords.find(r => r.studentId === s.id && r.week === selectedWeek);
           if (!exists) {
               newRecords.push({
@@ -715,7 +720,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       const newRecords = [...records];
       let count = 0;
       
-      students.forEach(s => {
+      activeStudents.forEach(s => {
           const idx = newRecords.findIndex(r => r.studentId === s.id && r.week === selectedWeek);
           let record: ConductRecord;
 
@@ -830,8 +835,8 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   const pieData = useMemo(() => {
     let good = 0, fair = 0, pass = 0, fail = 0;
     
-    // Filter records within range
-    const filteredRecords = records.filter(r => r.week >= statsStartWeek && r.week <= statsEndWeek);
+    // Filter records within range and ONLY for active students
+    const filteredRecords = records.filter(r => r.week >= statsStartWeek && r.week <= statsEndWeek && activeStudents.some(s => s.id === r.studentId));
     const studentStats = new Map<string, {total: number, count: number}>();
     
     filteredRecords.forEach(r => {
@@ -854,7 +859,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
         { name: 'Đạt', value: pass },
         { name: 'Chưa đạt', value: fail },
     ].filter(x => x.value > 0);
-  }, [records, statsStartWeek, statsEndWeek, settings]);
+  }, [records, statsStartWeek, statsEndWeek, settings, activeStudents]);
 
 
   // --- Semester Calculation Logic ---
@@ -1218,7 +1223,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                        {students.map((s, idx) => {
+                        {activeStudents.map((s, idx) => {
                             const rec = records.find(r => r.studentId === s.id && r.week === selectedWeek);
                             const score = rec ? rec.score : '';
                             const rank = rec ? getRankFromScore(rec.score) : '-';
@@ -1350,7 +1355,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                            <div className="w-full md:w-1/2">
                                 <h4 className="font-bold mb-2">Thống kê nhanh (Tuần {statsStartWeek} - {statsEndWeek}):</h4>
                                 <ul className="space-y-2 text-sm text-gray-600">
-                                    <li>Tổng số học sinh: <strong>{students.length}</strong></li>
+                                    <li>Tổng số học sinh (Active): <strong>{activeStudents.length}</strong></li>
                                     <li>Tuần dữ liệu: <strong>{new Set(records.filter(r => r.week >= statsStartWeek && r.week <= statsEndWeek).map(r => r.week)).size}</strong></li>
                                 </ul>
                            </div>
@@ -1401,7 +1406,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {students.map((stu, index) => {
+                                        {activeStudents.map((stu, index) => {
                                             const r = records.find(rec => rec.studentId === stu.id && rec.week === selectedWeek);
                                             const score = r ? r.score : 0;
                                             const rank = r ? getRankFromScore(score) : 'Chưa có';
@@ -1452,7 +1457,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                            {/* Wrapper for Export */}
                            <div ref={multiReportRef} className="bg-white p-4">
                                <div className="space-y-6">
-                                   {students.map(s => {
+                                   {activeStudents.map(s => {
                                        const studentRecords = records.filter(r => r.studentId === s.id && r.week >= statsStartWeek && r.week <= statsEndWeek && (r.violations.length > 0 || (r.positiveBehaviors && r.positiveBehaviors.length > 0) || r.note));
                                        if (studentRecords.length === 0) return null;
                                        
@@ -1535,7 +1540,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                                       </tr>
                                   </thead>
                                   <tbody className="divide-y divide-gray-200">
-                                      {students.map((s, idx) => {
+                                      {activeStudents.map((s, idx) => {
                                           const result = calculateSemesterRank(s, semesterMode);
                                           return (
                                               <tr key={s.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
