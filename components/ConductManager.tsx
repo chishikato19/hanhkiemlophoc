@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Student, ConductRecord, Settings, AcademicRank, BehaviorItem } from '../types';
 import { getStudents, getConductRecords, saveConductRecords, getSettings, saveSettings, uploadToCloud } from '../services/dataService';
-import { Settings as SettingsIcon, AlertTriangle, Calendar, User, CheckSquare, PlusCircle, X, Search, FileText, PieChart as PieChartIcon, LayoutList, ThumbsUp, Star, Trash2, Plus, MinusCircle, StickyNote, Download, ImageIcon, ArrowLeft, Copy, Lock, Unlock, Save, CloudUpload, ThumbsDown, BellRing, Filter } from 'lucide-react';
+import { Settings as SettingsIcon, AlertTriangle, Calendar, User, CheckSquare, PlusCircle, X, Search, FileText, PieChart as PieChartIcon, LayoutList, ThumbsUp, Star, Trash2, Plus, MinusCircle, StickyNote, Download, ImageIcon, ArrowLeft, Copy, Lock, Unlock, Save, CloudUpload, ThumbsDown, BellRing, Filter, Eraser } from 'lucide-react';
 import { addLog } from '../utils/logger';
 
 // --- Constants ---
@@ -738,6 +738,31 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       addLog('CONDUCT', `Đã điền điểm mặc định cho ${count} học sinh tuần ${selectedWeek}.`);
   };
 
+  const handleClearAllWeekData = () => {
+      if (isLocked) return;
+      if (!window.confirm(`CẢNH BÁO QUAN TRỌNG:\n\nBạn có chắc chắn muốn XÓA SẠCH dữ liệu (Điểm, Lỗi, Thưởng, Ghi chú) của TẤT CẢ học sinh trong Tuần ${selectedWeek}?\n\nDữ liệu sẽ trở về mặc định. Hành động này không thể hoàn tác!`)) return;
+      
+      const activeIds = new Set(activeStudents.map(s => s.id));
+      
+      let newRecords = records.map(r => {
+          if (r.week === selectedWeek && activeIds.has(r.studentId)) {
+              return {
+                  ...r,
+                  score: settings.defaultScore,
+                  violations: [],
+                  positiveBehaviors: [],
+                  note: ''
+              };
+          }
+          return r;
+      });
+
+      setRecords(newRecords);
+      saveConductRecords(newRecords);
+      setHasUnsavedChanges(true);
+      addLog('CONDUCT', `Đã xóa trắng dữ liệu toàn bộ lớp tuần ${selectedWeek}.`);
+  };
+
   const handleClassBonus = () => {
       if (isLocked) return;
       const bonusStr = prompt("Nhập số điểm muốn CỘNG cho cả lớp tuần này:", "5");
@@ -819,6 +844,19 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       saveConductRecords(newRecords);
       setHasUnsavedChanges(true);
       addLog('CONDUCT', `Đã ${isBonus ? 'cộng' : 'trừ'} ${amount} điểm cho ${count} học sinh tuần ${selectedWeek}.`);
+  };
+
+  const handleClearStudentData = (studentId: string) => {
+      if (isLocked) return;
+      if (!window.confirm("Bạn có chắc chắn muốn xóa hết dữ liệu (Điểm, Lỗi, Thưởng, Ghi chú) của học sinh này trong tuần hiện tại?")) return;
+      
+      updateRecord(studentId, selectedWeek, {
+          score: settings.defaultScore,
+          violations: [],
+          positiveBehaviors: [],
+          note: ''
+      });
+      addLog('CONDUCT', `Đã xóa dữ liệu tuần ${selectedWeek} của học sinh ${studentId}`);
   };
 
   const exportClassImage = async () => {
@@ -1291,6 +1329,13 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                         >
                             <CheckSquare size={16}/> Điền mặc định
                         </button>
+                        <button 
+                            onClick={handleClearAllWeekData}
+                            className="flex items-center gap-2 text-sm bg-gray-100 text-red-600 border border-red-200 px-3 py-1.5 rounded hover:bg-red-50 font-medium"
+                            title="Xóa hết dữ liệu tuần này về trạng thái ban đầu"
+                        >
+                            <Trash2 size={16}/> Xóa Tuần này
+                        </button>
                     </div>
                 )}
              </div>
@@ -1307,6 +1352,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                             <th className="p-3 border-l border-white w-1/4">Lỗi vi phạm</th>
                             <th className="p-3 border-l border-white w-1/4">Hành vi tốt</th>
                             <th className="p-3 border-l border-white flex-1">Ghi chú</th>
+                            <th className="p-3 w-10 text-center"></th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -1374,6 +1420,16 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                                             onChange={(e) => handleNoteChange(s.id, selectedWeek, e.target.value)}
                                             disabled={isLocked}
                                         />
+                                    </td>
+                                    <td className="p-3 text-center align-top">
+                                        <button 
+                                            onClick={() => handleClearStudentData(s.id)}
+                                            disabled={isLocked}
+                                            className={`text-gray-400 hover:text-red-500 p-1 rounded hover:bg-gray-100 ${isLocked ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                            title="Xóa trắng dữ liệu (Reset)"
+                                        >
+                                            <Eraser size={16} />
+                                        </button>
                                     </td>
                                 </tr>
                             );
