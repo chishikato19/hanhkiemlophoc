@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Student, ConductRecord, Settings, AcademicRank, BehaviorItem } from '../types';
 import { getStudents, getConductRecords, saveConductRecords, getSettings, saveSettings, uploadToCloud } from '../services/dataService';
-import { Settings as SettingsIcon, AlertTriangle, Calendar, User, CheckSquare, PlusCircle, X, Search, FileText, PieChart as PieChartIcon, LayoutList, ThumbsUp, Star, Trash2, Plus, MinusCircle, StickyNote, Download, ImageIcon, ArrowLeft, Copy, Lock, Unlock, Save, CloudUpload, ThumbsDown, BellRing } from 'lucide-react';
+import { Settings as SettingsIcon, AlertTriangle, Calendar, User, CheckSquare, PlusCircle, X, Search, FileText, PieChart as PieChartIcon, LayoutList, ThumbsUp, Star, Trash2, Plus, MinusCircle, StickyNote, Download, ImageIcon, ArrowLeft, Copy, Lock, Unlock, Save, CloudUpload, ThumbsDown, BellRing, Filter } from 'lucide-react';
 import { addLog } from '../utils/logger';
 
 // --- Constants ---
@@ -542,6 +542,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   const [statsEndWeek, setStatsEndWeek] = useState(4);
   const [statsTab, setStatsTab] = useState<'chart' | 'week-report' | 'multi-report' | 'semester'>('chart');
   const [semesterMode, setSemesterMode] = useState<'s1' | 's2' | 'year'>('s1');
+  const [filterEmptyReports, setFilterEmptyReports] = useState(false); // New state for filtering
   
   // Settings Tab State
   const [settingTab, setSettingTab] = useState<'general' | 'behaviors'>('general');
@@ -1450,7 +1451,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
 
                   {statsTab === 'week-report' && (
                       <div>
-                          <div className="mb-4 flex items-center justify-between bg-gray-50 p-3 rounded">
+                          <div className="mb-4 flex flex-wrap items-center justify-between bg-gray-50 p-3 rounded gap-2">
                               <div className="flex items-center gap-2">
                                 <label className="font-bold">Chọn tuần xem báo cáo:</label>
                                 <select 
@@ -1463,9 +1464,20 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                                     ))}
                                 </select>
                               </div>
+                              
+                              <label className="flex items-center gap-2 cursor-pointer select-none border px-3 py-1 bg-white rounded shadow-sm hover:bg-gray-100">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={filterEmptyReports} 
+                                    onChange={e => setFilterEmptyReports(e.target.checked)}
+                                    className="w-4 h-4 text-indigo-600"
+                                  />
+                                  <span className="text-sm font-medium text-gray-700">Rút gọn danh sách (Ẩn HS không có ghi nhận riêng)</span>
+                              </label>
+
                               <button 
                                 onClick={exportClassImage}
-                                className="bg-indigo-600 text-white px-3 py-1.5 rounded text-sm flex items-center gap-2 hover:bg-indigo-700"
+                                className="bg-indigo-600 text-white px-3 py-1.5 rounded text-sm flex items-center gap-2 hover:bg-indigo-700 ml-auto"
                               >
                                   <ImageIcon size={16}/> Xuất ảnh cả lớp
                               </button>
@@ -1522,7 +1534,19 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {activeStudents.map((stu, index) => {
+                                        {activeStudents.filter(stu => {
+                                            if (!filterEmptyReports) return true;
+                                            const r = records.find(rec => rec.studentId === stu.id && rec.week === selectedWeek);
+                                            // Check if student has personal records (Violations OR Positives OR Note)
+                                            // Exclude common violations/positives
+                                            const displayViolations = r ? r.violations.filter(v => !commonViolations.includes(v)) : [];
+                                            const displayPositives = r ? (r.positiveBehaviors || []).filter(p => !commonPositives.includes(p)) : [];
+                                            const hasNote = r && r.note && r.note.trim() !== '';
+                                            
+                                            // Keep if they have ANY entry
+                                            return displayViolations.length > 0 || displayPositives.length > 0 || hasNote;
+
+                                        }).map((stu, index) => {
                                             const r = records.find(rec => rec.studentId === stu.id && rec.week === selectedWeek);
                                             const score = r ? r.score : 0;
                                             const rank = r ? getRankFromScore(score) : 'Chưa có';
