@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Student, ConductRecord, Settings, AcademicRank, BehaviorItem } from '../types';
 import { getStudents, getConductRecords, saveConductRecords, getSettings, saveSettings, uploadToCloud } from '../services/dataService';
-import { Settings as SettingsIcon, AlertTriangle, Calendar, User, CheckSquare, PlusCircle, X, Search, FileText, PieChart as PieChartIcon, LayoutList, ThumbsUp, Star, Trash2, Plus, MinusCircle, StickyNote, Download, ImageIcon, ArrowLeft, Copy, Lock, Unlock, Save, CloudUpload, ThumbsDown } from 'lucide-react';
+import { Settings as SettingsIcon, AlertTriangle, Calendar, User, CheckSquare, PlusCircle, X, Search, FileText, PieChart as PieChartIcon, LayoutList, ThumbsUp, Star, Trash2, Plus, MinusCircle, StickyNote, Download, ImageIcon, ArrowLeft, Copy, Lock, Unlock, Save, CloudUpload, ThumbsDown, BellRing } from 'lucide-react';
 import { addLog } from '../utils/logger';
 
 // --- Constants ---
@@ -968,6 +968,35 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       return { avgRaw, avgConverted, rank: semesterRank };
   };
 
+  // --- Common Items Calculation for Weekly Report ---
+  const getCommonWeekItems = () => {
+      const currentWeekRecords = records.filter(r => r.week === selectedWeek && activeStudents.some(s => s.id === r.studentId));
+      if (currentWeekRecords.length === 0) return { violations: [], positives: [] };
+
+      // Get duplicates that exist in ALL records
+      // 1. Violations
+      let commonViolations: string[] = [...currentWeekRecords[0].violations];
+      for (const rec of currentWeekRecords) {
+          commonViolations = commonViolations.filter(v => rec.violations.includes(v));
+      }
+      
+      // 2. Positives
+      let commonPositives: string[] = [...(currentWeekRecords[0].positiveBehaviors || [])];
+      for (const rec of currentWeekRecords) {
+          commonPositives = commonPositives.filter(p => (rec.positiveBehaviors || []).includes(p));
+      }
+
+      return { violations: commonViolations, positives: commonPositives };
+  };
+
+  const { violations: commonViolations, positives: commonPositives } = useMemo(() => {
+     if (statsTab === 'week-report') {
+         return getCommonWeekItems();
+     }
+     return { violations: [], positives: [] };
+  }, [records, selectedWeek, activeStudents, statsTab]);
+
+
   // --- Renders ---
 
   return (
@@ -1448,6 +1477,36 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                                 <h3 className="text-xl font-bold uppercase text-indigo-800">Báo cáo Tổng hợp Tuần {selectedWeek}</h3>
                                 <p className="text-sm text-gray-500 italic">{getWeekLabel(selectedWeek)}</p>
                             </div>
+
+                            {/* Class Wide Events Section */}
+                            {(commonViolations.length > 0 || commonPositives.length > 0) && (
+                                <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {commonViolations.length > 0 && (
+                                        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                            <h4 className="font-bold text-red-700 text-sm flex items-center gap-2 uppercase mb-2">
+                                                <AlertTriangle size={16}/> Vi phạm chung (Trừ điểm cả lớp)
+                                            </h4>
+                                            <ul className="list-disc list-inside text-sm text-red-800">
+                                                {formatGroupedList(commonViolations, settings.behaviorConfig.violations).split(', ').map((item, i) => (
+                                                    <li key={i}>{item}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                    {commonPositives.length > 0 && (
+                                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                            <h4 className="font-bold text-green-700 text-sm flex items-center gap-2 uppercase mb-2">
+                                                <Star size={16}/> Thành tích chung (Cộng điểm cả lớp)
+                                            </h4>
+                                            <ul className="list-disc list-inside text-sm text-green-800">
+                                                {formatGroupedList(commonPositives, settings.behaviorConfig.positives).split(', ').map((item, i) => (
+                                                    <li key={i}>{item}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             
                             <div className="overflow-x-auto">
                                 <table className="w-full border-collapse border border-gray-200 text-sm">
@@ -1457,8 +1516,8 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                                             <th className="border p-2">Học sinh</th>
                                             <th className="border p-2 w-16">Điểm</th>
                                             <th className="border p-2 w-20">Xếp loại</th>
-                                            <th className="border p-2 w-1/4">Vi phạm</th>
-                                            <th className="border p-2 w-1/4">Hành vi tốt</th>
+                                            <th className="border p-2 w-1/4">Vi phạm (Cá nhân)</th>
+                                            <th className="border p-2 w-1/4">Hành vi tốt (Cá nhân)</th>
                                             <th className="border p-2 w-1/4">Ghi chú</th>
                                         </tr>
                                     </thead>
@@ -1467,6 +1526,11 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                                             const r = records.find(rec => rec.studentId === stu.id && rec.week === selectedWeek);
                                             const score = r ? r.score : 0;
                                             const rank = r ? getRankFromScore(score) : 'Chưa có';
+                                            
+                                            // Filter out class-wide items for display
+                                            const displayViolations = r ? r.violations.filter(v => !commonViolations.includes(v)) : [];
+                                            const displayPositives = r ? (r.positiveBehaviors || []).filter(p => !commonPositives.includes(p)) : [];
+
                                             return (
                                                 <tr key={stu.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                                                     <td className="border p-2 text-center text-gray-500">{index + 1}</td>
@@ -1478,10 +1542,10 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                                                         {r && <span className={`text-xs font-bold px-1 rounded ${getRankColor(rank)}`}>{rank}</span>}
                                                     </td>
                                                     <td className="border p-2 text-red-700 text-xs">
-                                                        {r ? formatGroupedList(r.violations, settings.behaviorConfig.violations) : ''}
+                                                        {r ? formatGroupedList(displayViolations, settings.behaviorConfig.violations) : ''}
                                                     </td>
                                                     <td className="border p-2 text-green-700 text-xs">
-                                                        {r ? formatGroupedList(r.positiveBehaviors, settings.behaviorConfig.positives) : ''}
+                                                        {r ? formatGroupedList(displayPositives, settings.behaviorConfig.positives) : ''}
                                                     </td>
                                                     <td className="border p-2 text-gray-600 italic text-xs">
                                                         {r ? r.note : ''}
