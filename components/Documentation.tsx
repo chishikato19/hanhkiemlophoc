@@ -234,12 +234,23 @@ const Documentation: React.FC = () => {
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-indigo-700"><History size={24}/> Lịch sử Cập nhật</h3>
                 
                 <div className="relative border-l-2 border-indigo-200 ml-3 space-y-8 pl-6 py-2">
-                     {/* v1.8 */}
+                     {/* v1.9 */}
                     <div className="relative">
                         <span className="absolute -left-[33px] bg-indigo-600 text-white rounded-full p-1.5 ring-4 ring-indigo-50"><GitCommit size={16}/></span>
-                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 1.8 (Mới nhất)</h4>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 1.9 (Mới nhất)</h4>
                         <span className="text-xs text-gray-500 font-mono">Build hiện tại</span>
                         <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
+                            <li><strong>Phân tích Thông minh (Smart Analytics):</strong> Tự động cảnh báo khi học sinh sa sút phong độ, vi phạm lặp lại.</li>
+                            <li><strong>Cảnh báo trực quan:</strong> Hiển thị widget "Học sinh cần lưu ý" ở màn hình Thống kê.</li>
+                            <li><strong>Gợi ý Phiếu liên lạc:</strong> Tự động thêm nhận xét gợi ý từ hệ thống vào ảnh phiếu liên lạc.</li>
+                        </ul>
+                    </div>
+
+                     {/* v1.8 */}
+                    <div className="relative">
+                        <span className="absolute -left-[33px] bg-gray-200 text-gray-500 rounded-full p-1.5"><GitCommit size={16}/></span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 1.8</h4>
+                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
                             <li><strong>Báo cáo Chi tiết:</strong> Xem chi tiết học sinh trực tiếp từ bảng tổng hợp.</li>
                             <li><strong>Tổng kết Học kỳ:</strong> Hỗ trợ tính điểm HK1, HK2 và Cả năm.</li>
                             <li><strong>Cập nhật giao diện:</strong> Hiển thị xếp loại trong các bảng báo cáo.</li>
