@@ -5,10 +5,16 @@ import StudentManager from './components/StudentManager';
 import ConductManager from './components/ConductManager';
 import SeatingMap from './components/SeatingMap';
 import Documentation from './components/Documentation';
+import LoginGate from './components/LoginGate';
+import StudentPortal from './components/StudentPortal';
+import InboxManager from './components/InboxManager';
+import { getSettings } from './services/dataService';
 
 const App: React.FC = () => {
+  const [role, setRole] = useState<'teacher' | 'student' | null>(null);
   const [currentTab, setCurrentTab] = useState('students');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const settings = getSettings();
 
   // Warn on page reload/close
   useEffect(() => {
@@ -22,11 +28,24 @@ const App: React.FC = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
+  if (!role) {
+      return <LoginGate settings={settings} onLoginSuccess={setRole} />;
+  }
+
+  if (role === 'student') {
+      return <StudentPortal />;
+  }
+
   const renderContent = () => {
     switch (currentTab) {
       case 'students': return <StudentManager setHasUnsavedChanges={setHasUnsavedChanges} />;
       case 'conduct': return <ConductManager setHasUnsavedChanges={setHasUnsavedChanges} />;
       case 'seating': return <SeatingMap setHasUnsavedChanges={setHasUnsavedChanges} />;
+      case 'inbox': return (
+        <div className="max-w-7xl mx-auto py-6 px-4">
+             <InboxManager />
+        </div>
+      );
       case 'docs': return <Documentation />;
       default: return <StudentManager setHasUnsavedChanges={setHasUnsavedChanges} />;
     }

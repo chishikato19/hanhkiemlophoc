@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Student, Seat, ROWS, COLS, AcademicRank } from '../types';
-import { getStudents, getSeatingMap, saveSeatingMap } from '../services/dataService';
+import { getStudents, getSeatingMap, saveSeatingMap, getSettings } from '../services/dataService';
 import { autoArrangeSeating } from '../utils/seatingLogic';
 import { Printer, Shuffle, Save, Info, RotateCcw } from 'lucide-react';
 import { addLog } from '../utils/logger';
@@ -14,6 +14,7 @@ const SeatingMap: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [seats, setSeats] = useState<Seat[]>([]);
   const [draggedSeat, setDraggedSeat] = useState<Seat | null>(null);
+  const settings = getSettings();
 
   useEffect(() => {
     // Only load active students
@@ -182,9 +183,13 @@ const SeatingMap: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                     <div className="font-bold text-sm leading-tight line-clamp-2 break-words w-full">
                         {student.name}
                     </div>
-                    <div className="flex gap-1 mt-2 justify-center w-full">
-                        {student.isTalkative && <span title="Hay nói chuyện" className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter">⚠ Nói</span>}
-                        {student.rank === AcademicRank.GOOD && <span title="Học lực Tốt" className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold">★ Giỏi</span>}
+                    {/* Icons/Badges Row */}
+                    <div className="flex gap-1 mt-1 justify-center w-full flex-wrap">
+                         {student.isTalkative && <span title="Hay nói chuyện" className="text-[10px] bg-red-100 text-red-600 px-1 rounded font-bold">⚠</span>}
+                         {student.badges?.slice(0, 3).map(bid => {
+                             const badge = settings.gamification.badges.find(b => b.id === bid);
+                             return badge ? <span key={bid} title={badge.label} className="text-[10px]">{badge.icon}</span> : null;
+                         })}
                     </div>
                 </>
             ) : (
@@ -251,10 +256,9 @@ const SeatingMap: React.FC<Props> = ({ setHasUnsavedChanges }) => {
          <div>
             <strong>Ghi chú xếp chỗ:</strong>
             <ul className="list-disc ml-4 mt-1 space-y-1">
-                <li><span className="text-green-600 font-bold">★</span> : Học sinh Giỏi/Tốt - Được ưu tiên xếp vào các nhóm 2x2 để hỗ trợ bạn bè.</li>
+                <li><span className="text-green-600 font-bold">★</span> : Học sinh Giỏi/Tốt - Được ưu tiên xếp vào các nhóm 2x2.</li>
                 <li><span className="text-red-500 font-bold">⚠</span> : Học sinh hay nói chuyện.</li>
-                <li>Hệ thống tự động lưu vị trí ngay khi bạn thả chuột.</li>
-                <li>Nếu sơ đồ hiển thị <strong>Trống</strong> dù đã nhập học sinh, vui lòng nhấn nút <strong>Tự động xếp</strong> để khởi tạo.</li>
+                <li>Các biểu tượng nhỏ khác là Danh hiệu (Huy hiệu) học sinh đạt được.</li>
             </ul>
          </div>
       </div>
