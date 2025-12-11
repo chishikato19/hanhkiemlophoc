@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { getLogs, clearLogs } from '../utils/logger';
 import { LogEntry } from '../types';
@@ -160,12 +159,12 @@ const Documentation: React.FC = () => {
             <div className="prose max-w-none text-gray-700">
                 <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Cloud size={24}/> Hướng dẫn Kết nối Google Sheets</h3>
                 <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 text-sm mb-4">
-                    <strong>CẬP NHẬT QUAN TRỌNG (v2.2):</strong> Vui lòng cập nhật đoạn mã bên dưới vào Google Apps Script để khắc phục lỗi mất dữ liệu Xu và Huy hiệu khi đồng bộ.
+                    <strong>CẬP NHẬT QUAN TRỌNG (v2.2.1):</strong> Vui lòng cập nhật đoạn mã bên dưới vào Google Apps Script để khắc phục lỗi mất dữ liệu Xu và Huy hiệu khi đồng bộ.
                 </div>
 
                 <div className="bg-gray-100 p-4 rounded text-sm text-gray-600">
                         <div className="flex justify-between items-center mb-2">
-                            <h4 className="font-bold text-indigo-700">Mã Script Mới (v2.2):</h4>
+                            <h4 className="font-bold text-indigo-700">Mã Script Mới (v2.2.1):</h4>
                         </div>
                         <pre className="bg-gray-800 text-gray-100 p-3 rounded text-xs overflow-x-auto font-mono whitespace-pre-wrap select-all">
 {`function doGet(e) {
@@ -332,6 +331,16 @@ function response(data) {
             <div className="max-w-3xl">
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-indigo-700"><History size={24}/> Lịch sử Cập nhật</h3>
                 <div className="relative border-l-2 border-indigo-200 ml-3 space-y-8 pl-6 py-2">
+                     {/* v2.2.1 */}
+                     <div className="relative">
+                        <span className="absolute -left-[33px] bg-red-600 text-white rounded-full p-1.5 ring-4 ring-red-50"><Bug size={16}/></span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 2.2.1 (Hotfix)</h4>
+                        <span className="text-xs text-gray-500 font-mono">Sửa lỗi Logic</span>
+                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
+                            <li><strong>Sửa lỗi Race Condition:</strong> Khắc phục tình trạng khi bấm "Tính Xu", dữ liệu Xu vừa cộng bị ghi đè bởi quy trình tính Danh hiệu ngay sau đó.</li>
+                            <li><strong>Logic Tuần tự:</strong> Đảm bảo hệ thống tính toán xong Xu rồi mới dùng kết quả đó để xét duyệt Danh hiệu.</li>
+                        </ul>
+                    </div>
                      {/* v2.2 */}
                      <div className="relative">
                         <span className="absolute -left-[33px] bg-green-600 text-white rounded-full p-1.5 ring-4 ring-green-50"><GitCommit size={16}/></span>
