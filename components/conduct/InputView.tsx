@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Calendar, Lock, Unlock, Star, ThumbsDown, CheckSquare, Coins, Trash2, Eraser, Gift } from 'lucide-react';
+import { Calendar, Lock, Unlock, Star, ThumbsDown, CheckSquare, Coins, Trash2, Eraser, Gift, RotateCcw } from 'lucide-react';
 import { Student, ConductRecord, Settings, AcademicRank } from '../../types';
 import TagSelector from '../shared/TagSelector';
 
@@ -17,6 +17,7 @@ interface Props {
     handleClassPenalty: () => void;
     handleFillDefault: () => void;
     handleCalculateCoinsForWeek: () => void;
+    handleUndoCoinsForWeek: () => void;
     handleClearAllWeekData: () => void;
     handleScoreChange: (sid: string, week: number, val: string) => void;
     handleTagChange: (sid: string, week: number, label: string, points: number, delta: number, isPos: boolean) => void;
@@ -30,8 +31,8 @@ interface Props {
 
 const InputView: React.FC<Props> = ({
     students, records, settings, selectedWeek, setSelectedWeek, isLocked, toggleLockWeek, getWeekLabel,
-    handleClassBonus, handleClassPenalty, handleFillDefault, handleCalculateCoinsForWeek, handleClearAllWeekData,
-    handleScoreChange, handleTagChange, handleNoteChange, handleClearStudentData, handleOpenGamification, setSelectedStudentForDetail,
+    handleClassBonus, handleClassPenalty, handleFillDefault, handleCalculateCoinsForWeek, handleUndoCoinsForWeek,
+    handleClearAllWeekData, handleScoreChange, handleTagChange, handleNoteChange, handleClearStudentData, handleOpenGamification, setSelectedStudentForDetail,
     getRankFromScore, getRankColor
 }) => {
     const activeStudents = students.filter(s => s.isActive !== false);
@@ -50,19 +51,44 @@ const InputView: React.FC<Props> = ({
                         {isLocked ? <><Lock size={14}/> Đã khóa</> : <><Unlock size={14}/> Mở khóa</>}
                     </button>
                 </div>
+
+                {/* Coin Controls - Visible Always, but styling changes based on Lock status */}
+                <div className="flex gap-1 border-l border-r border-gray-300 px-2 mx-1">
+                        <button 
+                            onClick={handleCalculateCoinsForWeek} 
+                            disabled={!isLocked}
+                            className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded font-medium border transition-colors
+                            ${isLocked 
+                                ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-200 cursor-pointer' 
+                                : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'}`}
+                            title={isLocked ? "Cộng xu cho học sinh" : "Vui lòng KHÓA tuần này để tính xu"}
+                        >
+                            <Coins size={16}/> Tính Xu
+                        </button>
+                        <button 
+                            onClick={handleUndoCoinsForWeek} 
+                            className="flex items-center gap-1 text-sm bg-gray-100 text-gray-600 px-2 py-1.5 rounded hover:bg-gray-200 font-medium border" 
+                            title="Xóa xu đã cộng tuần này"
+                        >
+                            <RotateCcw size={16}/>
+                        </button>
+                </div>
+
+                {/* Bulk Edit Controls - Only visible when Unlocked */}
                 {!isLocked && (
                     <div className="flex gap-2">
                         <button onClick={handleClassBonus} className="flex items-center gap-2 text-sm bg-blue-100 text-blue-700 px-3 py-1.5 rounded hover:bg-blue-200 font-medium"><Star size={16}/> Cộng cả lớp</button>
                         <button onClick={handleClassPenalty} className="flex items-center gap-2 text-sm bg-red-100 text-red-700 px-3 py-1.5 rounded hover:bg-red-200 font-medium"><ThumbsDown size={16}/> Trừ cả lớp</button>
                         <button onClick={handleFillDefault} className="flex items-center gap-2 text-sm bg-green-100 text-green-700 px-3 py-1.5 rounded hover:bg-green-200 font-medium"><CheckSquare size={16}/> Điền mặc định</button>
-                        <button onClick={handleCalculateCoinsForWeek} className="flex items-center gap-2 text-sm bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded hover:bg-yellow-200 font-medium border border-yellow-200"><Coins size={16}/> Tính Xu Tuần</button>
                         <button onClick={handleClearAllWeekData} className="flex items-center gap-2 text-sm bg-gray-100 text-red-600 border border-red-200 px-3 py-1.5 rounded hover:bg-red-50 font-medium"><Trash2 size={16}/> Xóa Tuần</button>
                     </div>
                 )}
              </div>
 
              <div className="flex-1 overflow-auto relative">
-                {isLocked && <div className="absolute inset-0 bg-gray-100 bg-opacity-20 pointer-events-none z-0"></div>}
+                {/* Overlay only blocks inputs, not the whole table, so we can still see data */}
+                {isLocked && <div className="absolute inset-0 z-0 bg-gray-50 bg-opacity-10 pointer-events-none"></div>}
+                
                 <table className="w-full text-left text-sm border-collapse">
                     <thead className="bg-gray-100 sticky top-0 z-10 shadow-sm text-gray-600 font-semibold">
                         <tr>
@@ -102,9 +128,9 @@ const InputView: React.FC<Props> = ({
                                     <td className="p-3 border-l border-gray-100 align-top"><TagSelector selectedTags={rec?.positiveBehaviors || []} availableItems={settings.behaviorConfig.positives} onChange={(label, points, delta) => handleTagChange(s.id, selectedWeek, label, points, delta, true)} placeholder="..." isPositive={true} disabled={isLocked}/></td>
                                     <td className="p-3 border-l border-gray-100 align-top"><input type="text" className={`w-full border-b border-gray-200 focus:border-indigo-500 outline-none text-sm py-1 bg-transparent text-gray-600 placeholder-gray-300 ${isLocked ? 'cursor-not-allowed' : ''}`} placeholder="Thêm ghi chú..." value={rec?.note || ''} onChange={(e) => handleNoteChange(s.id, selectedWeek, e.target.value)} disabled={isLocked}/></td>
                                     <td className="p-3 text-center">
-                                        <button onClick={() => handleOpenGamification(s)} className="text-orange-500 hover:text-orange-600 flex flex-col items-center mx-auto">
-                                            <Gift size={16} />
-                                            <span className="text-[10px] font-bold">{s.balance || 0} Xu</span>
+                                        <button onClick={() => handleOpenGamification(s)} className="text-orange-500 hover:text-orange-600 flex flex-col items-center mx-auto hover:scale-105 transition-transform">
+                                            <Gift size={18} />
+                                            <span className="text-xs font-bold bg-orange-100 text-orange-700 px-1.5 rounded mt-1">{s.balance || 0} Xu</span>
                                         </button>
                                     </td>
                                     <td className="p-3 text-center align-top"><button onClick={() => handleClearStudentData(s.id)} disabled={isLocked} className={`text-gray-400 hover:text-red-500 p-1 rounded hover:bg-gray-100 ${isLocked ? 'opacity-30 cursor-not-allowed' : ''}`}><Eraser size={16} /></button></td>
