@@ -3,11 +3,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getLogs, clearLogs } from '../utils/logger';
 import { LogEntry } from '../types';
 import { seedData, getGasUrl, saveGasUrl, exportFullData, importFullData } from '../services/dataService';
-import { Bug, Database, Book, History, GitCommit, Download, Upload, Cloud, Save } from 'lucide-react';
+import { Bug, Database, Book, History, GitCommit, Download, Upload, Cloud, Save, Copy } from 'lucide-react';
 
 const Documentation: React.FC = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [activeSubTab, setActiveSubTab] = useState<'log' | 'guide' | 'manual' | 'data' | 'version'>('manual');
+  const [activeSubTab, setActiveSubTab] = useState<'log' | 'guide' | 'manual' | 'data' | 'version'>('guide');
   
   // GAS URL State
   const [gasUrl, setGasUrl] = useState('');
@@ -149,7 +149,7 @@ const Documentation: React.FC = () => {
                         <ul className="list-disc list-inside text-sm space-y-2">
                             <li><strong>Hạnh kiểm:</strong> Nhập lỗi vi phạm, cộng điểm theo tuần.</li>
                             <li><strong>Điểm danh:</strong> Theo dõi vắng, muộn (Có trong tab Báo cáo).</li>
-                            <li><strong>Cấu hình:</strong> Vào Cấu hình để đổi Mật khẩu và Mã lớp.</li>
+                            <li><strong>Gamification:</strong> Vào Cửa Hàng để xem Xu và đổi quà cho học sinh.</li>
                         </ul>
                     </div>
                 </div>
@@ -160,14 +160,16 @@ const Documentation: React.FC = () => {
             <div className="prose max-w-none text-gray-700">
                 <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Cloud size={24}/> Hướng dẫn Kết nối Google Sheets</h3>
                 <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 text-sm mb-4">
-                    <strong>Lưu ý quan trọng:</strong> Để tính năng "Học sinh báo cáo từ xa" hoạt động chính xác với danh sách lỗi mới, bạn <strong>BẮT BUỘC</strong> phải cập nhật đoạn mã bên dưới vào Google Apps Script và Deploy lại.
+                    <strong>CẬP NHẬT QUAN TRỌNG (v2.2):</strong> Vui lòng cập nhật đoạn mã bên dưới vào Google Apps Script để khắc phục lỗi mất dữ liệu Xu và Huy hiệu khi đồng bộ.
                 </div>
 
                 <div className="bg-gray-100 p-4 rounded text-sm text-gray-600">
-                        <h4 className="font-bold mb-2">Mã Script Mới (Copy đè lên file Code.gs cũ):</h4>
+                        <div className="flex justify-between items-center mb-2">
+                            <h4 className="font-bold text-indigo-700">Mã Script Mới (v2.2):</h4>
+                        </div>
                         <pre className="bg-gray-800 text-gray-100 p-3 rounded text-xs overflow-x-auto font-mono whitespace-pre-wrap select-all">
 {`function doGet(e) {
-  return ContentService.createTextOutput("Smart Classroom API v2.1 is running.");
+  return ContentService.createTextOutput("Smart Classroom API v2.2 is running.");
 }
 
 function doPost(e) {
@@ -178,21 +180,27 @@ function doPost(e) {
     // --- 1. LƯU DỮ LIỆU GIÁO VIÊN (SAVE) ---
     if (payload.action === 'save') {
       var data = payload.data;
+      
+      // Save Students as JSON to preserve coins/inventory
       var sSheet = getSheet(sheet, 'Students'); sSheet.clear();
       if (data.students && data.students.length > 0) {
-        var rows = data.students.map(s => [s.id, s.name, s.gender, s.rank, s.isTalkative]);
-        sSheet.getRange(1, 1, rows.length, 5).setValues(rows);
+        // ID | Name | JSON Data
+        var rows = data.students.map(s => [s.id, s.name, JSON.stringify(s)]);
+        sSheet.getRange(1, 1, rows.length, 3).setValues(rows);
       }
+      
       var cSheet = getSheet(sheet, 'Conduct'); cSheet.clear();
       if (data.conduct && data.conduct.length > 0) {
         var cRows = data.conduct.map(c => [c.id, c.studentId, c.week, JSON.stringify(c)]);
         cSheet.getRange(1, 1, cRows.length, 4).setValues(cRows);
       }
+      
       var aSheet = getSheet(sheet, 'Attendance'); aSheet.clear();
       if (data.attendance && data.attendance.length > 0) {
          var aRows = data.attendance.map(a => [a.id, a.studentId, a.date, JSON.stringify(a)]);
          aSheet.getRange(1, 1, aRows.length, 4).setValues(aRows);
       }
+      
       var cfgSheet = getSheet(sheet, 'Config'); cfgSheet.clear();
       var configRows = [
          ['seating', JSON.stringify(data.seating)],
@@ -200,27 +208,39 @@ function doPost(e) {
          ['last_updated', data.timestamp]
       ];
       cfgSheet.getRange(1, 1, configRows.length, 2).setValues(configRows);
+      
       return response({status: 'success'});
     }
     
     // --- 2. TẢI DỮ LIỆU GIÁO VIÊN (LOAD) ---
     if (payload.action === 'load') {
       var result = {};
+      
       var sSheet = sheet.getSheetByName('Students');
       if (sSheet && sSheet.getLastRow() > 0) {
-         var rows = sSheet.getRange(1, 1, sSheet.getLastRow(), 5).getValues();
-         result.students = rows.map(r => ({id: r[0], name: r[1], gender: r[2], rank: r[3], isTalkative: r[4]}));
+         // Load from JSON column (Col 3)
+         var rows = sSheet.getRange(1, 1, sSheet.getLastRow(), 3).getValues();
+         result.students = rows.map(r => {
+             try { return JSON.parse(r[2]); } 
+             catch(e) { 
+                 // Fallback for old data format
+                 return {id: r[0], name: r[1], gender: 'Nam', rank: 'Đạt', isTalkative: false}; 
+             }
+         });
       }
+      
       var cSheet = sheet.getSheetByName('Conduct');
       if (cSheet && cSheet.getLastRow() > 0) {
          var rows = cSheet.getRange(1, 1, cSheet.getLastRow(), 4).getValues();
          result.conduct = rows.map(r => JSON.parse(r[3]));
       }
+      
       var aSheet = sheet.getSheetByName('Attendance');
       if (aSheet && aSheet.getLastRow() > 0) {
          var rows = aSheet.getRange(1, 1, aSheet.getLastRow(), 4).getValues();
          result.attendance = rows.map(r => JSON.parse(r[3]));
       }
+      
       var cfgSheet = sheet.getSheetByName('Config');
       if (cfgSheet && cfgSheet.getLastRow() > 0) {
          var rows = cfgSheet.getRange(1, 1, cfgSheet.getLastRow(), 2).getValues();
@@ -237,6 +257,7 @@ function doPost(e) {
        var sSheet = sheet.getSheetByName('Students');
        var names = [];
        if (sSheet && sSheet.getLastRow() > 0) {
+          // Get ID and Name
           var rows = sSheet.getRange(1, 1, sSheet.getLastRow(), 2).getValues();
           names = rows.map(r => ({id: r[0], name: r[1]}));
        }
@@ -311,27 +332,25 @@ function response(data) {
             <div className="max-w-3xl">
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-indigo-700"><History size={24}/> Lịch sử Cập nhật</h3>
                 <div className="relative border-l-2 border-indigo-200 ml-3 space-y-8 pl-6 py-2">
+                     {/* v2.2 */}
+                     <div className="relative">
+                        <span className="absolute -left-[33px] bg-green-600 text-white rounded-full p-1.5 ring-4 ring-green-50"><GitCommit size={16}/></span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 2.2</h4>
+                        <span className="text-xs text-gray-500 font-mono">Đồng bộ Dữ liệu</span>
+                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
+                            <li><strong>Sửa lỗi Đồng bộ:</strong> Cập nhật mã Script để lưu trữ đầy đủ thông tin Xu, Túi đồ và Huy hiệu của học sinh lên Google Sheet (không còn bị mất khi tải về).</li>
+                            <li><strong>Hiển thị Xu:</strong> Thêm hiển thị số dư Xu ngay trong bảng nhập liệu hạnh kiểm để tiện theo dõi.</li>
+                            <li><strong>Xử lý lỗi Cloud:</strong> Cải thiện thông báo lỗi khi URL Google Sheet chưa chính xác.</li>
+                        </ul>
+                    </div>
                      {/* v2.1 */}
                      <div className="relative">
                         <span className="absolute -left-[33px] bg-indigo-600 text-white rounded-full p-1.5 ring-4 ring-indigo-50"><GitCommit size={16}/></span>
-                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 2.1</h4>
+                        <h4 className="font-bold text-lg text-gray-600">Phiên bản 2.1</h4>
                         <span className="text-xs text-gray-500 font-mono">Cải tiến Nhập liệu</span>
                         <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
                             <li><strong>Chọn nhiều học sinh:</strong> Giao diện Cổng thông tin cho phép chọn nhiều học sinh cùng lúc khi điểm danh.</li>
                             <li><strong>Danh sách lỗi thông minh:</strong> Học sinh chọn lỗi từ danh sách có sẵn thay vì tự gõ.</li>
-                            <li><strong>Ghi chú tự động:</strong> Ghi chú được ghép vào tên lỗi để hiển thị rõ ràng hơn trong báo cáo.</li>
-                        </ul>
-                    </div>
-                     {/* v2.0 */}
-                    <div className="relative">
-                        <span className="absolute -left-[33px] bg-gray-400 text-white rounded-full p-1.5 ring-4 ring-gray-100"><GitCommit size={16}/></span>
-                        <h4 className="font-bold text-lg text-gray-600">Phiên bản 2.0</h4>
-                        <span className="text-xs text-gray-500 font-mono">Tính năng lớn</span>
-                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
-                            <li><strong>Chế độ Cán bộ lớp (Student Portal):</strong> Giao diện riêng cho học sinh báo cáo từ xa.</li>
-                            <li><strong>Bảo mật:</strong> Đăng nhập Giáo viên (Mật khẩu) và Học sinh (Mã lớp).</li>
-                            <li><strong>Hộp thư đến (Inbox):</strong> Giáo viên duyệt báo cáo của học sinh trước khi tính điểm.</li>
-                            <li><strong>Quản lý Điểm danh:</strong> Theo dõi Vắng/Muộn và báo cáo thống kê.</li>
                         </ul>
                     </div>
                 </div>
