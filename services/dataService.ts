@@ -165,7 +165,7 @@ const defaultSettings: Settings = {
 
         // --- DỄ THƯƠNG (Mới) ---
         { id: 'av_f_35', label: 'Thỏ Con', url: '🐰', cost: 150 },
-        { id: 'av_f_36', label: 'Mèo Con', url: '🐱', cost: 150 },
+        { id: 'av_f_36', label: 'Mèo Con', url: '😺', cost: 150 },
         { id: 'av_f_38', label: 'Bướm Xinh', url: '🦋', cost: 150 },
         { id: 'av_f_40', label: 'Cánh Cụt', url: '🐧', cost: 150 },
         { id: 'av_f_41', label: 'Hồng Hạc', url: '🦩', cost: 200 },
@@ -316,6 +316,30 @@ export const getSettings = (): Settings => {
   const stored = localStorage.getItem(KEY_SETTINGS);
   if (stored) {
     const parsed = JSON.parse(stored);
+
+    // Helper to merge lists (Defaults + Saved)
+    // This ensures that if we update the default list (e.g. add new badges/avatars), 
+    // old save files get them too, while preserving user customizations if IDs match.
+    const mergeLists = (defaults: any[], saved: any[]) => {
+        const merged = [...defaults];
+        const defaultIds = new Set(defaults.map(i => i.id));
+        saved.forEach(item => {
+            if (defaultIds.has(item.id)) {
+                // Keep the saved item (user might have customized cost/points)
+                const idx = merged.findIndex(i => i.id === item.id);
+                if (idx > -1) merged[idx] = item;
+            } else {
+                // Add custom user items that don't exist in defaults
+                merged.push(item);
+            }
+        });
+        return merged;
+    };
+
+    const mergedBadges = mergeLists(defaultSettings.gamification.badges, parsed.gamification?.badges || []);
+    const mergedAvatars = mergeLists(defaultSettings.gamification.avatars, parsed.gamification?.avatars || []);
+    const mergedRewards = mergeLists(defaultSettings.gamification.rewards, parsed.gamification?.rewards || []);
+
     return { 
         ...defaultSettings, 
         ...parsed,
@@ -329,9 +353,9 @@ export const getSettings = (): Settings => {
         },
         gamification: {
           enabled: parsed.gamification?.enabled ?? defaultSettings.gamification.enabled,
-          badges: parsed.gamification?.badges || defaultSettings.gamification.badges,
-          rewards: parsed.gamification?.rewards || defaultSettings.gamification.rewards,
-          avatars: parsed.gamification?.avatars || defaultSettings.gamification.avatars,
+          badges: mergedBadges,
+          rewards: mergedRewards,
+          avatars: mergedAvatars,
           coinRules: { ...defaultSettings.gamification.coinRules, ...(parsed.gamification?.coinRules || {}) }
         },
         lockedWeeks: parsed.lockedWeeks || [],
