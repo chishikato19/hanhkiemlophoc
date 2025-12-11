@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
-import { Student, Settings, RewardItem, BadgeConfig } from '../types';
-import { ShoppingBag, Award, Coins, AlertCircle, Backpack, Check, Ticket } from 'lucide-react';
-import { purchaseItem, useItem } from '../utils/gamification';
+import { Student, Settings, RewardItem, BadgeConfig, AvatarItem } from '../types';
+import { ShoppingBag, Award, Coins, AlertCircle, Backpack, Check, Ticket, User, Smile, PlusCircle, Trash2 } from 'lucide-react';
+import { purchaseItem, useItem, purchaseAvatar, equipAvatar } from '../utils/gamification';
 import { addLog } from '../utils/logger';
 
 interface Props {
@@ -13,7 +13,7 @@ interface Props {
 }
 
 const GamificationPanel: React.FC<Props> = ({ student, settings, onUpdateStudent, onClose }) => {
-    const [view, setView] = useState<'store' | 'badges' | 'inventory'>('store');
+    const [view, setView] = useState<'store' | 'badges' | 'inventory' | 'avatars'>('store');
 
     const handleBuy = (item: RewardItem) => {
         if (!window.confirm(`Bạn muốn đổi "${item.label}" với giá ${item.cost} Xu?`)) return;
@@ -42,14 +42,56 @@ const GamificationPanel: React.FC<Props> = ({ student, settings, onUpdateStudent
         }
     };
 
+    const handleBuyAvatar = (avatar: AvatarItem) => {
+        const isOwned = (student.ownedAvatars || []).includes(avatar.id);
+        
+        if (isOwned) {
+            // Equip logic
+            const updated = equipAvatar(student, avatar);
+            onUpdateStudent(updated);
+            alert(`Đã thay đổi hình đại diện thành: ${avatar.label}`);
+            return;
+        }
+
+        if (!window.confirm(`Bạn muốn mua Avatar "${avatar.label}" với giá ${avatar.cost} Xu?`)) return;
+
+        const updated = purchaseAvatar(student, avatar);
+        if (updated) {
+            onUpdateStudent(updated);
+            addLog('SHOP', `${student.name} đã mua avatar: ${avatar.label} (-${avatar.cost} xu)`);
+            alert("Mua thành công và đã trang bị!");
+        } else {
+            alert("Bạn không đủ xu!");
+        }
+    };
+
+    const handleToggleBadge = (badgeId: string, hasBadge: boolean) => {
+        if (hasBadge) {
+            if(!window.confirm("Bạn muốn THU HỒI danh hiệu này?")) return;
+            const newBadges = (student.badges || []).filter(b => b !== badgeId);
+            onUpdateStudent({ ...student, badges: newBadges });
+            addLog('GAME', `${student.name} bị thu hồi danh hiệu: ${badgeId}`);
+        } else {
+            // Grant
+            if(!window.confirm("Bạn muốn TẶNG danh hiệu này cho học sinh?")) return;
+            const newBadges = [...(student.badges || []), badgeId];
+            onUpdateStudent({ ...student, badges: newBadges });
+            addLog('GAME', `${student.name} được tặng danh hiệu: ${badgeId}`);
+        }
+    };
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden">
                 {/* Header */}
                 <div className="bg-gradient-to-r from-yellow-500 to-orange-600 p-6 text-white flex justify-between items-center shrink-0">
                     <div className="flex items-center gap-4">
-                        <div className="bg-white text-orange-600 w-16 h-16 rounded-full flex items-center justify-center text-3xl font-bold shadow-lg border-4 border-orange-300">
-                            {student.name.charAt(0)}
+                        <div className="w-20 h-20 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white flex items-center justify-center text-5xl">
+                             {student.avatarUrl ? (
+                                 <span>{student.avatarUrl}</span>
+                             ) : (
+                                <span className="text-3xl font-bold text-orange-600">{student.name.charAt(0)}</span>
+                             )}
                         </div>
                         <div>
                             <h2 className="text-2xl font-bold">{student.name}</h2>
@@ -75,6 +117,12 @@ const GamificationPanel: React.FC<Props> = ({ student, settings, onUpdateStudent
                         <ShoppingBag size={20} /> Cửa Hàng
                     </button>
                     <button 
+                        onClick={() => setView('avatars')}
+                        className={`flex-1 py-4 font-bold text-center flex items-center justify-center gap-2 transition-colors whitespace-nowrap px-4 ${view === 'avatars' ? 'text-blue-600 border-b-4 border-blue-500 bg-blue-50' : 'text-gray-500 hover:bg-gray-50'}`}
+                    >
+                        <Smile size={20} /> Hình Đại Diện
+                    </button>
+                    <button 
                         onClick={() => setView('inventory')}
                         className={`flex-1 py-4 font-bold text-center flex items-center justify-center gap-2 transition-colors whitespace-nowrap px-4 ${view === 'inventory' ? 'text-green-600 border-b-4 border-green-500 bg-green-50' : 'text-gray-500 hover:bg-gray-50'}`}
                     >
@@ -84,7 +132,7 @@ const GamificationPanel: React.FC<Props> = ({ student, settings, onUpdateStudent
                         onClick={() => setView('badges')}
                         className={`flex-1 py-4 font-bold text-center flex items-center justify-center gap-2 transition-colors whitespace-nowrap px-4 ${view === 'badges' ? 'text-indigo-600 border-b-4 border-indigo-500 bg-indigo-50' : 'text-gray-500 hover:bg-gray-50'}`}
                     >
-                        <Award size={20} /> Bộ Sưu Tập
+                        <Award size={20} /> Danh Hiệu
                     </button>
                 </div>
 
@@ -119,6 +167,51 @@ const GamificationPanel: React.FC<Props> = ({ student, settings, onUpdateStudent
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    )}
+                    
+                    {view === 'avatars' && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {(settings.gamification.avatars || []).map(avatar => {
+                                const isOwned = (student.ownedAvatars || []).includes(avatar.id);
+                                const isEquipped = student.avatarUrl === avatar.url;
+                                
+                                return (
+                                    <div key={avatar.id} className={`bg-white rounded-xl shadow-sm border p-3 flex flex-col items-center ${isEquipped ? 'ring-2 ring-blue-500' : ''}`}>
+                                        <div className="w-20 h-20 rounded-full bg-gray-100 mb-2 flex items-center justify-center text-5xl">
+                                            {avatar.url}
+                                        </div>
+                                        <h3 className="font-bold text-gray-800 text-sm mb-2">{avatar.label}</h3>
+                                        
+                                        {isOwned ? (
+                                            <button 
+                                                onClick={() => handleBuyAvatar(avatar)}
+                                                disabled={isEquipped}
+                                                className={`w-full py-1.5 rounded-lg text-xs font-bold ${isEquipped ? 'bg-green-100 text-green-700 cursor-default' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+                                            >
+                                                {isEquipped ? 'Đang dùng' : 'Trang bị'}
+                                            </button>
+                                        ) : (
+                                            <button 
+                                                onClick={() => handleBuyAvatar(avatar)}
+                                                disabled={(student.balance || 0) < avatar.cost}
+                                                className={`w-full py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1 ${
+                                                    (student.balance || 0) >= avatar.cost 
+                                                    ? 'bg-orange-600 text-white hover:bg-orange-700' 
+                                                    : 'bg-gray-200 text-gray-400'
+                                                }`}
+                                            >
+                                                <Coins size={12}/> {avatar.cost}
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                             {(!settings.gamification.avatars || settings.gamification.avatars.length === 0) && (
+                                <div className="col-span-full text-center py-10 text-gray-400">
+                                    Chưa có Avatar nào trong cửa hàng. Hãy vào Cấu hình để thêm.
+                                </div>
+                             )}
                         </div>
                     )}
 
@@ -161,28 +254,42 @@ const GamificationPanel: React.FC<Props> = ({ student, settings, onUpdateStudent
                     )}
 
                     {view === 'badges' && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {settings.gamification.badges.map(badge => {
-                                const isUnlocked = (student.badges || []).includes(badge.id);
-                                return (
-                                    <div key={badge.id} className={`flex items-center p-4 rounded-xl border-2 transition-all ${isUnlocked ? 'bg-white border-indigo-100 shadow-sm' : 'bg-gray-100 border-gray-200 opacity-70 grayscale'}`}>
-                                        <div className={`w-16 h-16 rounded-full flex items-center justify-center text-4xl mr-4 ${isUnlocked ? 'bg-indigo-50' : 'bg-gray-200'}`}>
-                                            {badge.icon}
+                        <div>
+                            <div className="mb-4 text-sm text-gray-500 bg-blue-50 p-2 rounded border border-blue-100 italic">
+                                * Giáo viên có thể bấm trực tiếp vào danh hiệu để Tặng hoặc Thu hồi thủ công.
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {settings.gamification.badges.map(badge => {
+                                    const isUnlocked = (student.badges || []).includes(badge.id);
+                                    return (
+                                        <div 
+                                            key={badge.id} 
+                                            onClick={() => handleToggleBadge(badge.id, isUnlocked)}
+                                            className={`flex items-center p-4 rounded-xl border-2 transition-all cursor-pointer hover:shadow-md ${isUnlocked ? 'bg-white border-indigo-100 shadow-sm' : 'bg-gray-100 border-gray-200 opacity-80 grayscale hover:grayscale-0'}`}
+                                        >
+                                            <div className={`w-16 h-16 rounded-full flex items-center justify-center text-4xl mr-4 ${isUnlocked ? 'bg-indigo-50' : 'bg-gray-200'}`}>
+                                                {badge.icon}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex justify-between items-start">
+                                                    <h3 className={`font-bold ${isUnlocked ? 'text-indigo-900' : 'text-gray-500'}`}>{badge.label}</h3>
+                                                    <div className="text-gray-400 opacity-0 group-hover:opacity-100">
+                                                        {isUnlocked ? <Trash2 size={14} className="hover:text-red-500"/> : <PlusCircle size={14} className="hover:text-green-500"/>}
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs text-gray-500 mt-1">{badge.description}</p>
+                                                {isUnlocked ? (
+                                                    <span className="inline-block mt-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">Đã đạt được</span>
+                                                ) : (
+                                                    <span className="inline-block mt-2 text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                                                        <AlertCircle size={10}/> Chưa mở khóa
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h3 className={`font-bold ${isUnlocked ? 'text-indigo-900' : 'text-gray-500'}`}>{badge.label}</h3>
-                                            <p className="text-xs text-gray-500 mt-1">{badge.description}</p>
-                                            {isUnlocked ? (
-                                                <span className="inline-block mt-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">Đã đạt được</span>
-                                            ) : (
-                                                <span className="inline-block mt-2 text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                                                    <AlertCircle size={10}/> Chưa mở khóa
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
                 </div>

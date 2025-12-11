@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Settings as SettingsIcon, ArrowDown, ArrowUp, ArrowUpDown, Pencil, Trash2, Key, Lock } from 'lucide-react';
-import { Settings, BehaviorItem, RewardItem } from '../../types';
+import { Settings, BehaviorItem, RewardItem, AvatarItem } from '../../types';
 
 interface Props {
     settings: Settings;
@@ -73,7 +73,7 @@ const SettingsModal: React.FC<Props> = ({ settings, updateSettings, onClose, rec
                     <div className="flex gap-2 text-sm font-medium">
                         <button onClick={() => setSettingTab('general')} className={`px-3 py-1 rounded ${settingTab === 'general' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:bg-gray-100'}`}>Chung</button>
                         <button onClick={() => setSettingTab('behaviors')} className={`px-3 py-1 rounded ${settingTab === 'behaviors' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:bg-gray-100'}`}>Lỗi / Điểm cộng</button>
-                        <button onClick={() => setSettingTab('gamification')} className={`px-3 py-1 rounded ${settingTab === 'gamification' ? 'bg-orange-100 text-orange-700' : 'text-gray-500 hover:bg-gray-100'}`}>Hệ thống Quà</button>
+                        <button onClick={() => setSettingTab('gamification')} className={`px-3 py-1 rounded ${settingTab === 'gamification' ? 'bg-orange-100 text-orange-700' : 'text-gray-500 hover:bg-gray-100'}`}>Hệ thống Quà & Avatar</button>
                     </div>
                 </div>
                 <div className="overflow-y-auto flex-1 p-6">
@@ -152,28 +152,44 @@ const SettingsModal: React.FC<Props> = ({ settings, updateSettings, onClose, rec
                                     <div><label className="block text-xs text-gray-600">Không vi phạm</label><input type="number" value={settings.gamification.coinRules.cleanSheet} onChange={e => updateSettings({ gamification: { ...settings.gamification, coinRules: { ...settings.gamification.coinRules, cleanSheet: parseInt(e.target.value) } } })} className="w-full border p-2 rounded"/></div>
                                 </div>
                             </section>
+                            
+                            {/* Avatar Config */}
                             <section>
-                                <h4 className="font-bold text-indigo-700 text-sm mb-2">Cấu hình Danh hiệu (Badges)</h4>
-                                <div className="space-y-2 max-h-48 overflow-y-auto">
-                                    {settings.gamification.badges.map((badge, idx) => (
-                                        <div key={badge.id} className="border p-2 rounded flex justify-between items-center bg-gray-50">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-2xl">{badge.icon}</span>
-                                                <div>
-                                                    <div className="font-bold text-sm">{badge.label}</div>
-                                                    <div className="text-xs text-gray-500">{badge.description}</div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs bg-gray-200 px-2 rounded">Ngưỡng: {badge.threshold}</span>
-                                            </div>
-                                        </div>
-                                    ))}
+                                <h4 className="font-bold text-blue-700 text-sm mb-2">Cấu hình Avatar (Bán trong shop)</h4>
+                                <div className="space-y-2 mb-4">
+                                     {(settings.gamification.avatars || []).map((avatar, idx) => (
+                                         <div key={avatar.id} className="flex gap-2 items-center bg-gray-50 p-2 rounded border">
+                                             <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-lg">{avatar.url}</div>
+                                             <input value={avatar.label} onChange={e => {
+                                                 const newAvatars = [...(settings.gamification.avatars || [])];
+                                                 newAvatars[idx] = { ...avatar, label: e.target.value };
+                                                 updateSettings({ gamification: { ...settings.gamification, avatars: newAvatars } });
+                                             }} className="flex-1 border p-1 rounded text-sm" placeholder="Tên Avatar"/>
+                                             <input value={avatar.url} onChange={e => {
+                                                 const newAvatars = [...(settings.gamification.avatars || [])];
+                                                 newAvatars[idx] = { ...avatar, url: e.target.value };
+                                                 updateSettings({ gamification: { ...settings.gamification, avatars: newAvatars } });
+                                             }} className="flex-1 border p-1 rounded text-sm" placeholder="Emoji/Biểu tượng"/>
+                                             <input type="number" value={avatar.cost} onChange={e => {
+                                                 const newAvatars = [...(settings.gamification.avatars || [])];
+                                                 newAvatars[idx] = { ...avatar, cost: parseInt(e.target.value) };
+                                                 updateSettings({ gamification: { ...settings.gamification, avatars: newAvatars } });
+                                             }} className="w-20 border p-1 rounded text-sm text-right" placeholder="Giá"/>
+                                             <button onClick={() => {
+                                                 const newAvatars = (settings.gamification.avatars || []).filter((_, i) => i !== idx);
+                                                  updateSettings({ gamification: { ...settings.gamification, avatars: newAvatars } });
+                                             }} className="text-red-500 hover:text-red-700"><Trash2 size={16}/></button>
+                                         </div>
+                                     ))}
+                                     <button onClick={() => {
+                                         const newAvatar: AvatarItem = { id: Date.now().toString(), label: 'Avatar mới', cost: 100, url: '🙂' };
+                                         updateSettings({ gamification: { ...settings.gamification, avatars: [...(settings.gamification.avatars || []), newAvatar] } });
+                                     }} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">+ Thêm Avatar</button>
                                 </div>
-                                <p className="text-xs text-gray-400 mt-1 italic">Liên hệ lập trình viên để thêm loại danh hiệu mới.</p>
                             </section>
+
                             <section>
-                                <h4 className="font-bold text-green-700 text-sm mb-2">Cấu hình Cửa hàng (Rewards)</h4>
+                                <h4 className="font-bold text-green-700 text-sm mb-2">Cấu hình Cửa hàng (Vật phẩm)</h4>
                                 <div className="space-y-2">
                                     {settings.gamification.rewards.map((reward, idx) => (
                                         <div key={reward.id} className="flex gap-2 items-center">
@@ -188,6 +204,10 @@ const SettingsModal: React.FC<Props> = ({ settings, updateSettings, onClose, rec
                                                 updateSettings({ gamification: { ...settings.gamification, rewards: newRewards } });
                                             }} className="w-20 border p-1 rounded text-sm text-right" />
                                             <span className="text-xs font-bold text-orange-500">Xu</span>
+                                            <button onClick={() => {
+                                                 const newRewards = settings.gamification.rewards.filter((_, i) => i !== idx);
+                                                 updateSettings({ gamification: { ...settings.gamification, rewards: newRewards } });
+                                            }} className="text-red-500 hover:text-red-700"><Trash2 size={16}/></button>
                                         </div>
                                     ))}
                                     <button onClick={() => {

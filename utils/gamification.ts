@@ -1,5 +1,5 @@
 
-import { Student, ConductRecord, Settings, BadgeConfig, RewardItem } from '../types';
+import { Student, ConductRecord, Settings, BadgeConfig, RewardItem, AvatarItem } from '../types';
 
 /**
  * Calculate potential coins for a specific week based on rules.
@@ -166,3 +166,42 @@ export const useItem = (
         inventory: newInventory
     };
 };
+
+/**
+ * Handle purchasing an Avatar.
+ * Adds to ownedAvatars and auto-equips it.
+ */
+export const purchaseAvatar = (
+    student: Student,
+    avatar: AvatarItem
+): Student | null => {
+    const currentBalance = student.balance || 0;
+    // Check if already owned
+    if ((student.ownedAvatars || []).includes(avatar.id)) {
+        // Just equip it
+        return { ...student, avatarUrl: avatar.url };
+    }
+
+    if (currentBalance >= avatar.cost) {
+        const newBalance = currentBalance - avatar.cost;
+        const newOwned = [...(student.ownedAvatars || []), avatar.id];
+
+        return {
+            ...student,
+            balance: newBalance,
+            ownedAvatars: newOwned,
+            avatarUrl: avatar.url // Auto equip on buy
+        };
+    }
+    return null;
+}
+
+/**
+ * Equip an owned avatar
+ */
+export const equipAvatar = (
+    student: Student,
+    avatar: AvatarItem
+): Student => {
+    return { ...student, avatarUrl: avatar.url };
+}

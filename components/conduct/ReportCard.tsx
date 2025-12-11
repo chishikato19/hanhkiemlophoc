@@ -40,7 +40,9 @@ const ReportCard: React.FC<Props> = ({ student, record, allRecords, week, settin
                     <p className="text-gray-500 text-xs mt-1 italic">Năm học 2024 - 2025</p>
                 </div>
                 <div className="flex items-center gap-4 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                     <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-2xl font-bold text-indigo-500 shadow-sm border border-indigo-100">{student.name.charAt(0)}</div>
+                     <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-4xl font-bold text-indigo-500 shadow-sm border border-indigo-100">
+                        {student.avatarUrl ? student.avatarUrl : student.name.charAt(0)}
+                     </div>
                      <div>
                          <h3 className="font-bold text-gray-800 text-lg">{student.name}</h3>
                          <p className="text-sm text-gray-500">Mã HS: {student.id}</p>

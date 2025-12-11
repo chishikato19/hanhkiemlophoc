@@ -26,6 +26,8 @@ export interface Student {
   balance?: number; // Coin balance
   badges?: string[]; // Array of Badge IDs unlocked
   inventory?: InventoryItem[]; // Items purchased
+  avatarUrl?: string; // Current avatar URL
+  ownedAvatars?: string[]; // List of Avatar IDs owned
 }
 
 export interface ConductRecord {
@@ -92,6 +94,13 @@ export interface RewardItem {
   stock?: number; // -1 for infinite
 }
 
+export interface AvatarItem {
+  id: string;
+  label: string;
+  url: string; // Image URL
+  cost: number;
+}
+
 export interface Settings {
   teacherPassword?: string;
   studentCode?: string;
@@ -123,6 +132,7 @@ export interface Settings {
     enabled: boolean;
     badges: BadgeConfig[];
     rewards: RewardItem[];
+    avatars: AvatarItem[]; // New: Avatars list
     coinRules: {
       weeklyGood: number; // Coins for Good rank
       behaviorBonus: number; // Coins per positive behavior

@@ -183,6 +183,7 @@ const SeatingMap: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                     <div className="font-bold text-sm leading-tight line-clamp-2 break-words w-full">
                         {student.name}
                     </div>
+                    {student.avatarUrl && <div className="text-xl leading-none mt-1">{student.avatarUrl}</div>}
                     {/* Icons/Badges Row */}
                     <div className="flex gap-1 mt-1 justify-center w-full flex-wrap">
                          {student.isTalkative && <span title="Hay nói chuyện" className="text-[10px] bg-red-100 text-red-600 px-1 rounded font-bold">⚠</span>}
