@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Student, ConductRecord, Settings, AcademicRank, BehaviorItem } from '../types';
 import { getStudents, getConductRecords, saveConductRecords, getSettings, saveSettings, uploadToCloud, saveStudents } from '../services/dataService';
@@ -52,8 +51,10 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       return generateClassAnalysis(students, records, settings, statsEndWeek);
   }, [students, records, settings, statsEndWeek]);
   
-  const calculateAllGamification = () => {
-      const updatedStudents = students.map(student => {
+  // FIX: Accept currentStudents argument to avoid stale closure state issues
+  // This ensures we calculate badges based on the LATEST coin data
+  const calculateAllGamification = (currentStudents: Student[] = students) => {
+      const updatedStudents = currentStudents.map(student => {
           const unlocked = checkBadges(student, records, settings);
           const newBadges = Array.from(new Set([...(student.badges || []), ...unlocked]));
           
@@ -162,6 +163,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       const summary: string[] = [];
 
       // Create new array reference for students
+      // We calculate the NEW state here
       const newStudents = students.map(s => {
           if (!s.isActive) return s;
 
@@ -177,15 +179,14 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
           return { ...s, balance: currentBalance + earned };
       });
 
-      setStudents(newStudents);
-      saveStudents(newStudents);
-      
       // Update Processed Weeks
       const newProcessed = [...(settings.processedWeeks || []), weekKey];
       updateSettings({ processedWeeks: newProcessed });
 
-      // Trigger Badge Check immediately
-      calculateAllGamification(); 
+      // CRITICAL FIX: Pass the 'newStudents' (which has the updated coins) 
+      // directly to the badge calculation logic. 
+      // Do NOT call setStudents(newStudents) separately here, allow calculateAllGamification to do the final save.
+      calculateAllGamification(newStudents); 
       
       const summaryText = summary.length > 0 ? summary.slice(0, 10).join('\n') + (summary.length > 10 ? `\n... và ${summary.length - 10} người khác.` : '') : 'Không ai nhận được xu.';
       alert(`Đã hoàn tất tính xu Tuần ${selectedWeek}!\n\nTổng cộng: ${totalCoins} xu phát ra.\n\nChi tiết:\n${summaryText}`);
