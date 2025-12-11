@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Calendar, Lock, Unlock, Star, ThumbsDown, CheckSquare, Coins, Trash2, Eraser, Gift, RotateCcw } from 'lucide-react';
+import { Calendar, Lock, Unlock, Star, ThumbsDown, CheckSquare, Coins, Trash2, Eraser, RotateCcw } from 'lucide-react';
 import { Student, ConductRecord, Settings, AcademicRank } from '../../types';
 import TagSelector from '../shared/TagSelector';
 
@@ -23,7 +23,6 @@ interface Props {
     handleTagChange: (sid: string, week: number, label: string, points: number, delta: number, isPos: boolean) => void;
     handleNoteChange: (sid: string, week: number, val: string) => void;
     handleClearStudentData: (sid: string) => void;
-    handleOpenGamification: (s: Student) => void;
     setSelectedStudentForDetail: (s: Student) => void;
     getRankFromScore: (s: number) => AcademicRank;
     getRankColor: (r: string) => string;
@@ -32,7 +31,7 @@ interface Props {
 const InputView: React.FC<Props> = ({
     students, records, settings, selectedWeek, setSelectedWeek, isLocked, toggleLockWeek, getWeekLabel,
     handleClassBonus, handleClassPenalty, handleFillDefault, handleCalculateCoinsForWeek, handleUndoCoinsForWeek,
-    handleClearAllWeekData, handleScoreChange, handleTagChange, handleNoteChange, handleClearStudentData, handleOpenGamification, setSelectedStudentForDetail,
+    handleClearAllWeekData, handleScoreChange, handleTagChange, handleNoteChange, handleClearStudentData, setSelectedStudentForDetail,
     getRankFromScore, getRankColor
 }) => {
     const activeStudents = students.filter(s => s.isActive !== false);
@@ -99,7 +98,6 @@ const InputView: React.FC<Props> = ({
                             <th className="p-3 border-l border-white w-1/4">Lỗi vi phạm</th>
                             <th className="p-3 border-l border-white w-1/4">Hành vi tốt</th>
                             <th className="p-3 border-l border-white flex-1">Ghi chú</th>
-                            <th className="p-3 w-24 text-center">Đổi quà</th>
                             <th className="p-3 w-10 text-center"></th>
                         </tr>
                     </thead>
@@ -127,12 +125,6 @@ const InputView: React.FC<Props> = ({
                                     <td className="p-3 border-l border-gray-100 align-top"><TagSelector selectedTags={rec ? rec.violations : []} availableItems={settings.behaviorConfig.violations} onChange={(label, points, delta) => handleTagChange(s.id, selectedWeek, label, points, delta, false)} placeholder="..." isPositive={false} disabled={isLocked}/></td>
                                     <td className="p-3 border-l border-gray-100 align-top"><TagSelector selectedTags={rec?.positiveBehaviors || []} availableItems={settings.behaviorConfig.positives} onChange={(label, points, delta) => handleTagChange(s.id, selectedWeek, label, points, delta, true)} placeholder="..." isPositive={true} disabled={isLocked}/></td>
                                     <td className="p-3 border-l border-gray-100 align-top"><input type="text" className={`w-full border-b border-gray-200 focus:border-indigo-500 outline-none text-sm py-1 bg-transparent text-gray-600 placeholder-gray-300 ${isLocked ? 'cursor-not-allowed' : ''}`} placeholder="Thêm ghi chú..." value={rec?.note || ''} onChange={(e) => handleNoteChange(s.id, selectedWeek, e.target.value)} disabled={isLocked}/></td>
-                                    <td className="p-3 text-center">
-                                        <button onClick={() => handleOpenGamification(s)} className="text-orange-500 hover:text-orange-600 flex flex-col items-center mx-auto hover:scale-105 transition-transform">
-                                            <Gift size={18} />
-                                            <span className="text-xs font-bold bg-orange-100 text-orange-700 px-1.5 rounded mt-1">{s.balance || 0} Xu</span>
-                                        </button>
-                                    </td>
                                     <td className="p-3 text-center align-top"><button onClick={() => handleClearStudentData(s.id)} disabled={isLocked} className={`text-gray-400 hover:text-red-500 p-1 rounded hover:bg-gray-100 ${isLocked ? 'opacity-30 cursor-not-allowed' : ''}`}><Eraser size={16} /></button></td>
                                 </tr>
                             );
