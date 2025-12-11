@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
 import { Student, Settings, RewardItem, BadgeConfig } from '../types';
-import { ShoppingBag, Award, Coins, AlertCircle } from 'lucide-react';
-import { purchaseItem } from '../utils/gamification';
+import { ShoppingBag, Award, Coins, AlertCircle, Backpack, Check, Ticket } from 'lucide-react';
+import { purchaseItem, useItem } from '../utils/gamification';
 import { addLog } from '../utils/logger';
 
 interface Props {
@@ -13,19 +13,32 @@ interface Props {
 }
 
 const GamificationPanel: React.FC<Props> = ({ student, settings, onUpdateStudent, onClose }) => {
-    const [view, setView] = useState<'store' | 'badges'>('store');
+    const [view, setView] = useState<'store' | 'badges' | 'inventory'>('store');
 
     const handleBuy = (item: RewardItem) => {
         if (!window.confirm(`Bạn muốn đổi "${item.label}" với giá ${item.cost} Xu?`)) return;
         
-        const newBalance = purchaseItem(student, item);
-        if (newBalance !== -1) {
-            const updated = { ...student, balance: newBalance };
-            onUpdateStudent(updated);
+        const updatedStudent = purchaseItem(student, item);
+        if (updatedStudent) {
+            onUpdateStudent(updatedStudent);
             addLog('SHOP', `${student.name} đã đổi quà: ${item.label} (-${item.cost} xu)`);
-            alert("Đổi quà thành công! Hãy báo với giáo viên để nhận quà.");
+            alert("Đổi quà thành công! Món quà đã được thêm vào Túi đồ.");
         } else {
             alert("Bạn không đủ Xu để đổi món quà này!");
+        }
+    };
+
+    const handleUseItem = (itemId: string) => {
+        const itemConfig = settings.gamification.rewards.find(r => r.id === itemId);
+        const itemName = itemConfig ? itemConfig.label : 'Món quà';
+
+        if (!window.confirm(`Xác nhận sử dụng "${itemName}" cho học sinh ${student.name}?`)) return;
+
+        const updatedStudent = useItem(student, itemId);
+        if (updatedStudent) {
+            onUpdateStudent(updatedStudent);
+            addLog('SHOP', `${student.name} đã sử dụng vật phẩm: ${itemName}`);
+            alert(`Đã sử dụng "${itemName}" thành công!`);
         }
     };
 
@@ -54,24 +67,30 @@ const GamificationPanel: React.FC<Props> = ({ student, settings, onUpdateStudent
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b">
+                <div className="flex border-b overflow-x-auto">
                     <button 
                         onClick={() => setView('store')}
-                        className={`flex-1 py-4 font-bold text-center flex items-center justify-center gap-2 transition-colors ${view === 'store' ? 'text-orange-600 border-b-4 border-orange-500 bg-orange-50' : 'text-gray-500 hover:bg-gray-50'}`}
+                        className={`flex-1 py-4 font-bold text-center flex items-center justify-center gap-2 transition-colors whitespace-nowrap px-4 ${view === 'store' ? 'text-orange-600 border-b-4 border-orange-500 bg-orange-50' : 'text-gray-500 hover:bg-gray-50'}`}
                     >
-                        <ShoppingBag size={20} /> Cửa Hàng Đổi Quà
+                        <ShoppingBag size={20} /> Cửa Hàng
+                    </button>
+                    <button 
+                        onClick={() => setView('inventory')}
+                        className={`flex-1 py-4 font-bold text-center flex items-center justify-center gap-2 transition-colors whitespace-nowrap px-4 ${view === 'inventory' ? 'text-green-600 border-b-4 border-green-500 bg-green-50' : 'text-gray-500 hover:bg-gray-50'}`}
+                    >
+                        <Backpack size={20} /> Túi Đồ ({student.inventory ? student.inventory.length : 0})
                     </button>
                     <button 
                         onClick={() => setView('badges')}
-                        className={`flex-1 py-4 font-bold text-center flex items-center justify-center gap-2 transition-colors ${view === 'badges' ? 'text-indigo-600 border-b-4 border-indigo-500 bg-indigo-50' : 'text-gray-500 hover:bg-gray-50'}`}
+                        className={`flex-1 py-4 font-bold text-center flex items-center justify-center gap-2 transition-colors whitespace-nowrap px-4 ${view === 'badges' ? 'text-indigo-600 border-b-4 border-indigo-500 bg-indigo-50' : 'text-gray-500 hover:bg-gray-50'}`}
                     >
-                        <Award size={20} /> Bộ Sưu Tập Huy Hiệu
+                        <Award size={20} /> Bộ Sưu Tập
                     </button>
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-                    {view === 'store' ? (
+                    {view === 'store' && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             {settings.gamification.rewards.map(item => (
                                 <div key={item.id} className="bg-white rounded-xl shadow-sm border hover:shadow-md transition-shadow flex flex-col overflow-hidden">
@@ -101,7 +120,47 @@ const GamificationPanel: React.FC<Props> = ({ student, settings, onUpdateStudent
                                 </div>
                             ))}
                         </div>
-                    ) : (
+                    )}
+
+                    {view === 'inventory' && (
+                        <div>
+                             {(!student.inventory || student.inventory.length === 0) ? (
+                                 <div className="text-center py-20 opacity-50">
+                                     <Backpack size={64} className="mx-auto mb-4 text-gray-300"/>
+                                     <h3 className="text-xl font-bold text-gray-400">Túi đồ trống rỗng</h3>
+                                     <p className="text-gray-400">Hãy vào Cửa hàng để đổi quà nhé!</p>
+                                 </div>
+                             ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {student.inventory.map((invItem) => {
+                                        const itemConfig = settings.gamification.rewards.find(r => r.id === invItem.itemId);
+                                        return (
+                                            <div key={invItem.itemId} className="bg-white p-4 rounded-xl border border-green-200 shadow-sm flex items-center gap-4">
+                                                <div className="w-16 h-16 bg-green-50 rounded-lg flex items-center justify-center text-green-600 shrink-0 relative">
+                                                    <Ticket size={32} />
+                                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center border-2 border-white">
+                                                        x{invItem.count}
+                                                    </span>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <h3 className="font-bold text-gray-800">{itemConfig ? itemConfig.label : 'Vật phẩm cũ'}</h3>
+                                                    <p className="text-xs text-gray-500 line-clamp-2">{itemConfig ? itemConfig.description : ''}</p>
+                                                    <button 
+                                                        onClick={() => handleUseItem(invItem.itemId)}
+                                                        className="mt-2 bg-green-600 text-white text-xs px-3 py-1.5 rounded hover:bg-green-700 flex items-center gap-1 font-medium"
+                                                    >
+                                                        <Check size={12} /> Sử dụng
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                             )}
+                        </div>
+                    )}
+
+                    {view === 'badges' && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {settings.gamification.badges.map(badge => {
                                 const isUnlocked = (student.badges || []).includes(badge.id);
