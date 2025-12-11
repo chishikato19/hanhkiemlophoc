@@ -346,7 +346,7 @@ function response(data) {
                             <li><strong>Description:</strong> Nhập gì cũng được (vd: v1).</li>
                             <li><strong>Execute as (Thực thi dưới dạng):</strong> Chọn <em>"Me (Chính tôi)"</em>.</li>
                             <li><strong>Who has access (Ai có quyền truy cập):</strong> <span className="text-red-600 font-bold">Bắt buộc chọn "Anyone (Bất kỳ ai)"</span>.</li>
-                            <li>Bấm <strong>Deploy</strong>. Cấp quyền truy cập nếu được hỏi (Chọn Advanced -> Go to ... (unsafe)).</li>
+                            <li>Bấm <strong>Deploy</strong>. Cấp quyền truy cập nếu được hỏi (Chọn Advanced &rarr; Go to ... (unsafe)).</li>
                             <li>Copy <strong>Web App URL</strong> (có đuôi <code>/exec</code>).</li>
                         </ol>
                     </div>
