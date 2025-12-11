@@ -107,15 +107,62 @@ export const checkBadges = (
 };
 
 /**
- * Handle purchasing an item. Returns new balance if successful, or -1 if failed.
+ * Handle purchasing an item. Returns the updated Student object if successful, or null if failed.
  */
 export const purchaseItem = (
     student: Student,
     item: RewardItem
-): number => {
+): Student | null => {
     const currentBalance = student.balance || 0;
     if (currentBalance >= item.cost) {
-        return currentBalance - item.cost;
+        const newBalance = currentBalance - item.cost;
+        
+        // Add to inventory
+        const inventory = student.inventory || [];
+        const existingItemIndex = inventory.findIndex(i => i.itemId === item.id);
+        
+        let newInventory = [...inventory];
+        if (existingItemIndex > -1) {
+            newInventory[existingItemIndex] = { 
+                ...newInventory[existingItemIndex], 
+                count: newInventory[existingItemIndex].count + 1 
+            };
+        } else {
+            newInventory.push({ itemId: item.id, count: 1 });
+        }
+
+        return { 
+            ...student, 
+            balance: newBalance,
+            inventory: newInventory
+        };
     }
-    return -1; // Not enough funds
+    return null; // Not enough funds
+};
+
+/**
+ * Handle using an item from inventory. Returns updated Student or null if not found.
+ */
+export const useItem = (
+    student: Student,
+    itemId: string
+): Student | null => {
+    const inventory = student.inventory || [];
+    const itemIndex = inventory.findIndex(i => i.itemId === itemId);
+
+    if (itemIndex === -1) return null;
+
+    const currentItem = inventory[itemIndex];
+    let newInventory = [...inventory];
+    
+    if (currentItem.count > 1) {
+        newInventory[itemIndex] = { ...currentItem, count: currentItem.count - 1 };
+    } else {
+        newInventory = newInventory.filter(i => i.itemId !== itemId);
+    }
+
+    return {
+        ...student,
+        inventory: newInventory
+    };
 };

@@ -86,7 +86,8 @@ export const seedData = () => {
     isTalkative: i % 5 === 0,
     isActive: true,
     balance: Math.floor(Math.random() * 200), // Random starting coins
-    badges: i < 5 ? ['streak_4'] : [] // Top 5 students have a badge
+    badges: i < 5 ? ['streak_4'] : [], // Top 5 students have a badge
+    inventory: []
   }));
 
   const conduct: ConductRecord[] = [];
@@ -157,7 +158,8 @@ export const getStudents = (): Student[] => {
     ...s, 
     isActive: s.isActive !== undefined ? s.isActive : true,
     balance: s.balance !== undefined ? s.balance : 0,
-    badges: s.badges || []
+    badges: s.badges || [],
+    inventory: s.inventory || []
   }));
 };
 
@@ -268,7 +270,7 @@ export const exportFullData = () => {
     settings: getSettings(),
     gasUrl: getGasUrl(),
     exportDate: new Date().toISOString(),
-    version: '2.0'
+    version: '2.1'
   };
   return JSON.stringify(data, null, 2);
 };

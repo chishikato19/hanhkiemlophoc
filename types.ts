@@ -11,6 +11,11 @@ export enum Gender {
   FEMALE = 'Nữ'
 }
 
+export interface InventoryItem {
+  itemId: string;
+  count: number;
+}
+
 export interface Student {
   id: string;
   name: string;
@@ -20,6 +25,7 @@ export interface Student {
   isActive?: boolean;
   balance?: number; // Coin balance
   badges?: string[]; // Array of Badge IDs unlocked
+  inventory?: InventoryItem[]; // Items purchased
 }
 
 export interface ConductRecord {
