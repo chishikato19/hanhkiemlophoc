@@ -70,6 +70,30 @@ const defaultSettings: Settings = {
       { id: 'r3', label: 'Thẻ miễn bài tập', cost: 500, description: 'Miễn làm bài tập về nhà 1 lần', stock: -1 },
       { id: 'r4', label: 'Vé chọn chỗ VIP', cost: 300, description: 'Được tự chọn chỗ ngồi trong 1 ngày', stock: -1 },
       { id: 'r5', label: 'DJ của lớp', cost: 150, description: 'Được chọn nhạc giờ ra chơi', stock: -1 }
+    ],
+    avatars: [
+        // Robots
+        { id: 'av1', label: 'Robot Xanh', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Felix', cost: 100 },
+        { id: 'av2', label: 'Mèo Máy', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Aneka', cost: 150 },
+        { id: 'av3', label: 'Robot Chiến Binh', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Zoey', cost: 200 },
+        // Adventurers
+        { id: 'av4', label: 'Siêu Nhân', url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Alexander', cost: 200 },
+        { id: 'av5', label: 'Công Chúa', url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Willow', cost: 200 },
+        { id: 'av6', label: 'Ninja', url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Ninja', cost: 500 },
+        { id: 'av7', label: 'Pháp Sư', url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Magic', cost: 350 },
+        // Fun Emojis
+        { id: 'av8', label: 'Gấu Trúc', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Bear', cost: 300 },
+        { id: 'av9', label: 'Mặt Cười', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Smile', cost: 100 },
+        { id: 'av10', label: 'Mặt Ngầu', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Cool', cost: 150 },
+        // Artistic
+        { id: 'av11', label: 'Họa Sĩ', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Artist', cost: 250 },
+        { id: 'av12', label: 'Nhạc Công', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Music', cost: 250 },
+        // Pixel Art
+        { id: 'av13', label: 'Pixel Boy', url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=PixelBoy', cost: 150 },
+        { id: 'av14', label: 'Pixel Girl', url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=PixelGirl', cost: 150 },
+        // Animals
+        { id: 'av15', label: 'Mèo Con', url: 'https://api.dicebear.com/7.x/big-ears-neutral/svg?seed=Cat', cost: 200 },
+        { id: 'av16', label: 'Cún Con', url: 'https://api.dicebear.com/7.x/big-ears-neutral/svg?seed=Dog', cost: 200 }
     ]
   },
   lockedWeeks: [],
@@ -87,7 +111,9 @@ export const seedData = () => {
     isActive: true,
     balance: Math.floor(Math.random() * 200), // Random starting coins
     badges: i < 5 ? ['streak_4'] : [], // Top 5 students have a badge
-    inventory: []
+    inventory: [],
+    avatarUrl: undefined,
+    ownedAvatars: []
   }));
 
   const conduct: ConductRecord[] = [];
@@ -159,7 +185,9 @@ export const getStudents = (): Student[] => {
     isActive: s.isActive !== undefined ? s.isActive : true,
     balance: s.balance !== undefined ? s.balance : 0,
     badges: s.badges || [],
-    inventory: s.inventory || []
+    inventory: s.inventory || [],
+    avatarUrl: s.avatarUrl || undefined,
+    ownedAvatars: s.ownedAvatars || []
   }));
 };
 
@@ -217,6 +245,7 @@ export const getSettings = (): Settings => {
           enabled: parsed.gamification?.enabled ?? defaultSettings.gamification.enabled,
           badges: parsed.gamification?.badges || defaultSettings.gamification.badges,
           rewards: parsed.gamification?.rewards || defaultSettings.gamification.rewards,
+          avatars: parsed.gamification?.avatars || defaultSettings.gamification.avatars,
           coinRules: { ...defaultSettings.gamification.coinRules, ...(parsed.gamification?.coinRules || {}) }
         },
         lockedWeeks: parsed.lockedWeeks || [],
