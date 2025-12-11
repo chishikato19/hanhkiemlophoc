@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Student, ConductRecord, Settings, AcademicRank, BehaviorItem } from '../types';
 import { getStudents, getConductRecords, saveConductRecords, getSettings, saveSettings, uploadToCloud, saveStudents } from '../services/dataService';
@@ -6,7 +5,6 @@ import { CheckSquare, PieChart as PieChartIcon, Settings as SettingsIcon, CloudU
 import { addLog } from '../utils/logger';
 import { generateClassAnalysis } from '../utils/analytics';
 import { calculateWeeklyCoins, checkBadges } from '../utils/gamification';
-import GamificationPanel from './GamificationPanel';
 
 // Sub Components
 import InputView from './conduct/InputView';
@@ -28,10 +26,6 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   const [selectedWeek, setSelectedWeek] = useState(1);
   const [showSettings, setShowSettings] = useState(false);
   const [selectedStudentForDetail, setSelectedStudentForDetail] = useState<Student | null>(null);
-
-  // Gamification State
-  const [showGamification, setShowGamification] = useState(false);
-  const [selectedStudentForShop, setSelectedStudentForShop] = useState<Student | null>(null);
 
   const [statsStartWeek, setStatsStartWeek] = useState(1);
   const [statsEndWeek, setStatsEndWeek] = useState(4);
@@ -57,18 +51,9 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       return generateClassAnalysis(students, records, settings, statsEndWeek);
   }, [students, records, settings, statsEndWeek]);
   
-  const handleUpdateStudent = (updatedStudent: Student) => {
-      const newStudents = students.map(s => s.id === updatedStudent.id ? updatedStudent : s);
-      setStudents(newStudents);
-      saveStudents(newStudents);
-      // Update the selected student reference if needed so the modal updates
-      if (selectedStudentForShop?.id === updatedStudent.id) {
-          setSelectedStudentForShop(updatedStudent);
-      }
-  };
-
-  const calculateAllGamification = () => {
-      const updatedStudents = students.map(student => {
+  // FIX: Accept currentStudents argument to avoid stale closure state issues
+  const calculateAllGamification = (currentStudents: Student[] = students) => {
+      const updatedStudents = currentStudents.map(student => {
           const unlocked = checkBadges(student, records, settings);
           const newBadges = Array.from(new Set([...(student.badges || []), ...unlocked]));
           
@@ -80,27 +65,6 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       setStudents(updatedStudents);
       saveStudents(updatedStudents);
       addLog('GAME', 'Đã cập nhật danh hiệu cho toàn lớp.');
-  };
-
-  const handleOpenGamification = (student: Student) => {
-      // Always get the latest data from the students array
-      const currentStudentData = students.find(s => s.id === student.id) || student;
-      
-      const unlocked = checkBadges(currentStudentData, records, settings);
-      const updatedStudent = { 
-          ...currentStudentData, 
-          badges: Array.from(new Set([...(currentStudentData.badges || []), ...unlocked])) 
-      };
-
-      // If new badges found, save them
-      if (unlocked.some(b => !(currentStudentData.badges || []).includes(b))) {
-          const newAll = students.map(s => s.id === student.id ? updatedStudent : s);
-          setStudents(newAll);
-          saveStudents(newAll);
-      }
-      
-      setSelectedStudentForShop(updatedStudent);
-      setShowGamification(true);
   };
 
   const updateSettings = (partialSettings: any) => {
@@ -213,15 +177,12 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
           return { ...s, balance: currentBalance + earned };
       });
 
-      setStudents(newStudents);
-      saveStudents(newStudents);
-      
       // Update Processed Weeks
       const newProcessed = [...(settings.processedWeeks || []), weekKey];
       updateSettings({ processedWeeks: newProcessed });
 
-      // Trigger Badge Check immediately
-      calculateAllGamification(); 
+      // Trigger Badge Check immediately with the NEW updated list (Prevent race condition)
+      calculateAllGamification(newStudents); 
       
       const summaryText = summary.length > 0 ? summary.slice(0, 10).join('\n') + (summary.length > 10 ? `\n... và ${summary.length - 10} người khác.` : '') : 'Không ai nhận được xu.';
       alert(`Đã hoàn tất tính xu Tuần ${selectedWeek}!\n\nTổng cộng: ${totalCoins} xu phát ra.\n\nChi tiết:\n${summaryText}`);
@@ -301,15 +262,6 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
           />
       )}
 
-      {showGamification && selectedStudentForShop && (
-          <GamificationPanel 
-            student={selectedStudentForShop} 
-            settings={settings} 
-            onUpdateStudent={handleUpdateStudent} 
-            onClose={() => { setShowGamification(false); setSelectedStudentForShop(null); }}
-          />
-      )}
-
       <StudentDetailModal 
         student={selectedStudentForDetail} 
         records={records} 
@@ -344,7 +296,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
              handleUndoCoinsForWeek={handleUndoCoinsForWeek}
              handleClearAllWeekData={handleClearAllWeekData} handleScoreChange={handleScoreChange}
              handleTagChange={handleTagChange} handleNoteChange={handleNoteChange} handleClearStudentData={handleClearStudentData}
-             handleOpenGamification={handleOpenGamification} setSelectedStudentForDetail={setSelectedStudentForDetail}
+             setSelectedStudentForDetail={setSelectedStudentForDetail}
              getRankFromScore={getRankFromScore} getRankColor={getRankColor}
           />
       )}
