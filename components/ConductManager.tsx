@@ -52,6 +52,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   }, [students, records, settings, statsEndWeek]);
   
   // FIX: Accept currentStudents argument to avoid stale closure state issues
+  // This ensures we calculate badges based on the LATEST coin data
   const calculateAllGamification = (currentStudents: Student[] = students) => {
       const updatedStudents = currentStudents.map(student => {
           const unlocked = checkBadges(student, records, settings);
@@ -162,6 +163,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       const summary: string[] = [];
 
       // Create new array reference for students
+      // We calculate the NEW state here
       const newStudents = students.map(s => {
           if (!s.isActive) return s;
 
@@ -181,7 +183,9 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       const newProcessed = [...(settings.processedWeeks || []), weekKey];
       updateSettings({ processedWeeks: newProcessed });
 
-      // Trigger Badge Check immediately with the NEW updated list (Prevent race condition)
+      // CRITICAL FIX: Pass the 'newStudents' (which has the updated coins) 
+      // directly to the badge calculation logic. 
+      // Do NOT call setStudents(newStudents) separately here, allow calculateAllGamification to do the final save.
       calculateAllGamification(newStudents); 
       
       const summaryText = summary.length > 0 ? summary.slice(0, 10).join('\n') + (summary.length > 10 ? `\n... và ${summary.length - 10} người khác.` : '') : 'Không ai nhận được xu.';

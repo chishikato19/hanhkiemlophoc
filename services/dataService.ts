@@ -270,7 +270,7 @@ export const exportFullData = () => {
     settings: getSettings(),
     gasUrl: getGasUrl(),
     exportDate: new Date().toISOString(),
-    version: '2.1'
+    version: '2.2'
   };
   return JSON.stringify(data, null, 2);
 };
@@ -317,12 +317,17 @@ export const uploadToCloud = async (): Promise<boolean> => {
     try {
         addLog('CLOUD', 'Đang gửi dữ liệu lên Google Sheets...');
         const response = await fetch(url, { method: 'POST', body: JSON.stringify(payload) });
-        const result = await response.json();
-        if (result.status === 'success') {
-            addLog('CLOUD', 'Đồng bộ lên đám mây thành công!');
-            return true;
-        } else {
-            throw new Error(result.error);
+        // Try parsing JSON, if fail, usually means HTML error page
+        try {
+            const result = await response.json();
+            if (result.status === 'success') {
+                addLog('CLOUD', 'Đồng bộ lên đám mây thành công!');
+                return true;
+            } else {
+                throw new Error(result.error);
+            }
+        } catch (e) {
+            throw new Error("Phản hồi từ Google không hợp lệ. Kiểm tra Deployment ID.");
         }
     } catch (e: any) {
         addLog('CLOUD_ERROR', `Lỗi khi upload: ${e.message}`);
@@ -336,7 +341,16 @@ export const downloadFromCloud = async (): Promise<boolean> => {
     try {
         addLog('CLOUD', 'Đang tải dữ liệu từ Google Sheets...');
         const response = await fetch(url, { method: 'POST', body: JSON.stringify({ action: 'load' }) });
-        const result = await response.json();
+        
+        const text = await response.text();
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (e) {
+             console.error("Cloud response is not JSON:", text.substring(0, 100));
+             throw new Error("Dữ liệu trả về không phải JSON (Có thể do lỗi quyền truy cập hoặc URL sai). Hãy kiểm tra lại Permissions là 'Anyone'.");
+        }
+
         if (result.status === 'success' && result.data) {
             const { students, conduct, attendance, seating, settings } = result.data;
             if (students) localStorage.setItem(KEY_STUDENTS, JSON.stringify(students));
@@ -347,10 +361,11 @@ export const downloadFromCloud = async (): Promise<boolean> => {
             addLog('CLOUD', 'Đã tải và cập nhật dữ liệu từ đám mây.');
             return true;
         } else {
-            throw new Error(result.error);
+            throw new Error(result.error || "Lỗi không xác định từ Cloud.");
         }
     } catch (e: any) {
         addLog('CLOUD_ERROR', `Lỗi khi tải về: ${e.message}`);
+        alert(`Lỗi khi tải dữ liệu: ${e.message}`);
         return false;
     }
 };
