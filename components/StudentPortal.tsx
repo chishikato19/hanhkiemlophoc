@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { fetchStudentNamesOnly, sendStudentReport, fetchBehaviorList } from '../services/dataService';
-import { Send, CheckCircle, AlertTriangle, Clock, UserCheck, Search, CheckSquare, Square } from 'lucide-react';
+import { Send, CheckCircle, AlertTriangle, Clock, UserCheck, Search, CheckSquare, Square, XCircle, MinusCircle } from 'lucide-react';
 import { PendingReport, AttendanceStatus, BehaviorItem } from '../types';
 
 interface SimpleStudent { id: string; name: string; }
@@ -16,16 +16,17 @@ const StudentPortal: React.FC = () => {
     const [reporterId, setReporterId] = useState(''); 
     const [reportType, setReportType] = useState<'ATTENDANCE' | 'VIOLATION'>('ATTENDANCE');
     
-    // Multi-Select Target State
+    // Violation Mode: Multi-Select Students
     const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([]);
+    
+    // Attendance Mode: Individual Status Tracking
+    const [attendanceMarks, setAttendanceMarks] = useState<Record<string, AttendanceStatus | null>>({});
+
     const [studentSearch, setStudentSearch] = useState('');
 
     // Context State
     const [selectedWeek, setSelectedWeek] = useState(1);
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-    
-    // Data State
-    const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatus>(AttendanceStatus.LATE);
     
     // Violation Data
     const [selectedBehaviorId, setSelectedBehaviorId] = useState('');
@@ -44,6 +45,12 @@ const StudentPortal: React.FC = () => {
         loadData();
     }, []);
 
+    // Clear selections when switching modes
+    useEffect(() => {
+        setSelectedTargetIds([]);
+        setAttendanceMarks({});
+    }, [reportType]);
+
     const toggleTargetStudent = (id: string) => {
         if (selectedTargetIds.includes(id)) {
             setSelectedTargetIds(selectedTargetIds.filter(tid => tid !== id));
@@ -52,43 +59,82 @@ const StudentPortal: React.FC = () => {
         }
     };
 
+    const setStudentAttendance = (id: string, status: AttendanceStatus) => {
+        setAttendanceMarks(prev => {
+            const current = prev[id];
+            // Toggle off if clicking same status
+            if (current === status) {
+                const next = { ...prev };
+                delete next[id];
+                return next;
+            }
+            return { ...prev, [id]: status };
+        });
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const reporter = names.find(n => n.id === reporterId);
 
         if (!reporter) { alert("Vui lòng chọn tên người báo cáo!"); return; }
-        if (selectedTargetIds.length === 0) { alert("Vui lòng chọn ít nhất 1 học sinh!"); return; }
         
-        // Prepare content
-        let content = '';
-        if (reportType === 'ATTENDANCE') {
-            content = attendanceStatus;
-        } else {
-            if (!selectedBehaviorId) { alert("Vui lòng chọn lỗi vi phạm!"); return; }
-            const behavior = behaviors.find(b => b.id === selectedBehaviorId);
-            content = behavior ? behavior.label : 'Lỗi không xác định';
-        }
+        let promises: Promise<boolean>[] = [];
 
         setLoading(true);
 
-        // Send multiple reports (one for each selected student)
-        const promises = selectedTargetIds.map(targetId => {
-            const target = names.find(n => n.id === targetId);
-            if (!target) return Promise.resolve(false);
+        if (reportType === 'ATTENDANCE') {
+            const markedIds = Object.keys(attendanceMarks);
+            if (markedIds.length === 0) {
+                alert("Chưa chọn học sinh nào vắng/trễ!");
+                setLoading(false);
+                return;
+            }
 
-            const report: PendingReport = {
-                id: `REP-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-                timestamp: new Date().toISOString(),
-                targetDate: selectedDate,
-                week: selectedWeek,
-                reporterName: reporter.name,
-                targetStudentName: target.name,
-                type: reportType,
-                content: content,
-                note: note
-            };
-            return sendStudentReport(report);
-        });
+            promises = markedIds.map(targetId => {
+                const target = names.find(n => n.id === targetId);
+                const status = attendanceMarks[targetId];
+                if (!target || !status) return Promise.resolve(false);
+
+                const report: PendingReport = {
+                    id: `REP-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                    timestamp: new Date().toISOString(),
+                    targetDate: selectedDate,
+                    week: selectedWeek,
+                    reporterName: reporter.name,
+                    targetStudentName: target.name,
+                    type: 'ATTENDANCE',
+                    content: status,
+                    note: note
+                };
+                return sendStudentReport(report);
+            });
+
+        } else {
+            // VIOLATION MODE
+            if (selectedTargetIds.length === 0) { alert("Vui lòng chọn ít nhất 1 học sinh!"); setLoading(false); return; }
+            if (!selectedBehaviorId) { alert("Vui lòng chọn lỗi vi phạm!"); setLoading(false); return; }
+            
+            const behavior = behaviors.find(b => b.id === selectedBehaviorId);
+            const content = behavior ? behavior.label : 'Lỗi không xác định';
+
+            promises = selectedTargetIds.map(targetId => {
+                const target = names.find(n => n.id === targetId);
+                if (!target) return Promise.resolve(false);
+
+                const report: PendingReport = {
+                    id: `REP-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                    timestamp: new Date().toISOString(),
+                    targetDate: selectedDate,
+                    week: selectedWeek,
+                    reporterName: reporter.name,
+                    targetStudentName: target.name,
+                    type: 'VIOLATION',
+                    content: content,
+                    note: note
+                };
+                return sendStudentReport(report);
+            });
+        }
 
         await Promise.all(promises);
         setLoading(false);
@@ -96,6 +142,7 @@ const StudentPortal: React.FC = () => {
         setTimeout(() => {
             setSubmitted(false);
             setSelectedTargetIds([]);
+            setAttendanceMarks({});
             setSelectedBehaviorId('');
             setNote('');
         }, 3000);
@@ -173,7 +220,7 @@ const StudentPortal: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Student Selector (Scrollable) */}
+                    {/* Student List Area */}
                     <div className="flex-1 overflow-hidden flex flex-col min-h-0 bg-gray-50">
                         <div className="p-2 bg-white border-b flex items-center gap-2">
                              <Search size={16} className="text-gray-400"/>
@@ -183,22 +230,57 @@ const StudentPortal: React.FC = () => {
                                 value={studentSearch}
                                 onChange={e => setStudentSearch(e.target.value)}
                              />
-                             <span className="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">{selectedTargetIds.length} đã chọn</span>
+                             <span className="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
+                                {reportType === 'ATTENDANCE' ? Object.keys(attendanceMarks).length : selectedTargetIds.length} đã chọn
+                             </span>
                         </div>
                         <div className="flex-1 overflow-y-auto p-2">
                             <div className="grid grid-cols-1 gap-2">
                                 {filteredStudents.map(student => {
-                                    const isSelected = selectedTargetIds.includes(student.id);
-                                    return (
-                                        <div 
-                                            key={student.id}
-                                            onClick={() => toggleTargetStudent(student.id)}
-                                            className={`p-3 rounded-lg border flex items-center justify-between cursor-pointer transition-colors ${isSelected ? 'bg-orange-50 border-orange-300' : 'bg-white border-gray-200 hover:border-orange-200'}`}
-                                        >
-                                            <span className={`font-medium text-sm ${isSelected ? 'text-orange-800' : 'text-gray-700'}`}>{student.name}</span>
-                                            {isSelected ? <CheckSquare size={20} className="text-orange-500 fill-orange-50"/> : <Square size={20} className="text-gray-300"/>}
-                                        </div>
-                                    )
+                                    if (reportType === 'ATTENDANCE') {
+                                        const currentStatus = attendanceMarks[student.id];
+                                        return (
+                                            <div key={student.id} className="p-3 rounded-lg border bg-white border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                                <span className="font-medium text-sm text-gray-800">{student.name}</span>
+                                                <div className="flex gap-2">
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => setStudentAttendance(student.id, AttendanceStatus.LATE)}
+                                                        className={`flex-1 sm:flex-none text-xs px-2 py-1.5 rounded border transition-colors ${currentStatus === AttendanceStatus.LATE ? 'bg-yellow-100 border-yellow-300 text-yellow-800 font-bold shadow-inner' : 'bg-gray-50 hover:bg-gray-100'}`}
+                                                    >
+                                                        Đi trễ
+                                                    </button>
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => setStudentAttendance(student.id, AttendanceStatus.UNEXCUSED)}
+                                                        className={`flex-1 sm:flex-none text-xs px-2 py-1.5 rounded border transition-colors ${currentStatus === AttendanceStatus.UNEXCUSED ? 'bg-red-100 border-red-300 text-red-800 font-bold shadow-inner' : 'bg-gray-50 hover:bg-gray-100'}`}
+                                                    >
+                                                        Vắng KP
+                                                    </button>
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => setStudentAttendance(student.id, AttendanceStatus.EXCUSED)}
+                                                        className={`flex-1 sm:flex-none text-xs px-2 py-1.5 rounded border transition-colors ${currentStatus === AttendanceStatus.EXCUSED ? 'bg-blue-100 border-blue-300 text-blue-800 font-bold shadow-inner' : 'bg-gray-50 hover:bg-gray-100'}`}
+                                                    >
+                                                        Vắng CP
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    } else {
+                                        // VIOLATION MODE (Checkbox style)
+                                        const isSelected = selectedTargetIds.includes(student.id);
+                                        return (
+                                            <div 
+                                                key={student.id}
+                                                onClick={() => toggleTargetStudent(student.id)}
+                                                className={`p-3 rounded-lg border flex items-center justify-between cursor-pointer transition-colors ${isSelected ? 'bg-orange-50 border-orange-300' : 'bg-white border-gray-200 hover:border-orange-200'}`}
+                                            >
+                                                <span className={`font-medium text-sm ${isSelected ? 'text-orange-800' : 'text-gray-700'}`}>{student.name}</span>
+                                                {isSelected ? <CheckSquare size={20} className="text-orange-500 fill-orange-50"/> : <Square size={20} className="text-gray-300"/>}
+                                            </div>
+                                        );
+                                    }
                                 })}
                             </div>
                         </div>
@@ -206,21 +288,8 @@ const StudentPortal: React.FC = () => {
 
                     {/* Footer Details */}
                     <div className="p-4 bg-white border-t space-y-3 shrink-0">
-                         {/* Dynamic Content */}
-                        {reportType === 'ATTENDANCE' ? (
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Tình trạng</label>
-                                <select 
-                                    value={attendanceStatus}
-                                    onChange={(e) => setAttendanceStatus(e.target.value as AttendanceStatus)}
-                                    className="w-full border p-2 rounded-lg bg-yellow-50 text-sm font-medium"
-                                >
-                                    <option value={AttendanceStatus.LATE}>{AttendanceStatus.LATE}</option>
-                                    <option value={AttendanceStatus.UNEXCUSED}>{AttendanceStatus.UNEXCUSED}</option>
-                                    <option value={AttendanceStatus.EXCUSED}>{AttendanceStatus.EXCUSED}</option>
-                                </select>
-                            </div>
-                        ) : (
+                         {/* Dynamic Footer: Only show violation selector in Violation mode */}
+                        {reportType === 'VIOLATION' && (
                             <div>
                                  <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Chọn lỗi vi phạm</label>
                                  <select 
@@ -239,7 +308,7 @@ const StudentPortal: React.FC = () => {
                         <div>
                             <input 
                                 type="text"
-                                placeholder={reportType === 'ATTENDANCE' ? "Lý do (nếu có)..." : "Ghi chú (Giờ học, hoàn cảnh)..."}
+                                placeholder={reportType === 'ATTENDANCE' ? "Ghi chú chung (nếu cần)..." : "Ghi chú (Giờ học, hoàn cảnh)..."}
                                 value={note}
                                 onChange={e => setNote(e.target.value)}
                                 className="w-full border p-2 rounded-lg text-sm"
@@ -251,7 +320,7 @@ const StudentPortal: React.FC = () => {
                             disabled={loading}
                             className={`w-full py-3 rounded-xl font-bold text-white shadow-md flex items-center justify-center gap-2 ${loading ? 'bg-gray-400' : 'bg-orange-600 hover:bg-orange-700'}`}
                         >
-                            {loading ? 'Đang gửi...' : <><Send size={18} /> Gửi Báo Cáo ({selectedTargetIds.length})</>}
+                            {loading ? 'Đang gửi...' : <><Send size={18} /> Gửi Báo Cáo ({reportType === 'ATTENDANCE' ? Object.keys(attendanceMarks).length : selectedTargetIds.length})</>}
                         </button>
                     </div>
                 </form>
