@@ -61,6 +61,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       const newStudents = students.map(s => s.id === updatedStudent.id ? updatedStudent : s);
       setStudents(newStudents);
       saveStudents(newStudents);
+      // Update the selected student reference if needed so the modal updates
       if (selectedStudentForShop?.id === updatedStudent.id) {
           setSelectedStudentForShop(updatedStudent);
       }
@@ -82,13 +83,22 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   };
 
   const handleOpenGamification = (student: Student) => {
-      const unlocked = checkBadges(student, records, settings);
-      const updatedStudent = { ...student, badges: Array.from(new Set([...(student.badges || []), ...unlocked])) };
-      if (unlocked.some(b => !(student.badges || []).includes(b))) {
+      // Always get the latest data from the students array
+      const currentStudentData = students.find(s => s.id === student.id) || student;
+      
+      const unlocked = checkBadges(currentStudentData, records, settings);
+      const updatedStudent = { 
+          ...currentStudentData, 
+          badges: Array.from(new Set([...(currentStudentData.badges || []), ...unlocked])) 
+      };
+
+      // If new badges found, save them
+      if (unlocked.some(b => !(currentStudentData.badges || []).includes(b))) {
           const newAll = students.map(s => s.id === student.id ? updatedStudent : s);
           setStudents(newAll);
           saveStudents(newAll);
       }
+      
       setSelectedStudentForShop(updatedStudent);
       setShowGamification(true);
   };
@@ -176,9 +186,16 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   const handleClearStudentData = (studentId: string) => { if (isLocked) return; if(!window.confirm("Xóa dữ liệu tuần này?")) return; updateRecord(studentId, selectedWeek, { score: settings.defaultScore, violations: [], positiveBehaviors: [], note: '' }); };
   
   const handleCalculateCoinsForWeek = () => {
+      // 1. Check Locked
+      if (!isLocked) {
+          alert("Vui lòng KHÓA Tuần này trước khi tính Xu.\n(Để đảm bảo dữ liệu hạnh kiểm không thay đổi trong quá trình tính toán).");
+          return;
+      }
+
+      // 2. Check Processed
       const weekKey = `coins_week_${selectedWeek}`;
       if (settings.processedWeeks?.includes(weekKey)) {
-          alert(`Bạn đã tính xu cho Tuần ${selectedWeek} rồi! Để tránh cộng lặp lại, hệ thống sẽ không thực hiện nữa.`);
+          alert(`Bạn đã tính xu cho Tuần ${selectedWeek} rồi! Nếu muốn tính lại, hãy dùng nút "Hoàn tác Xu" trước.`);
           return;
       }
 
@@ -187,6 +204,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       let totalCoins = 0;
       const summary: string[] = [];
 
+      // Create new array reference for students
       const newStudents = students.map(s => {
           if (!s.isActive) return s;
 
@@ -209,10 +227,46 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       const newProcessed = [...(settings.processedWeeks || []), weekKey];
       updateSettings({ processedWeeks: newProcessed });
 
+      // Trigger Badge Check immediately
       calculateAllGamification(); 
       
       const summaryText = summary.length > 0 ? summary.slice(0, 10).join('\n') + (summary.length > 10 ? `\n... và ${summary.length - 10} người khác.` : '') : 'Không ai nhận được xu.';
       alert(`Đã hoàn tất tính xu Tuần ${selectedWeek}!\n\nTổng cộng: ${totalCoins} xu phát ra.\n\nChi tiết:\n${summaryText}`);
+  };
+
+  const handleUndoCoinsForWeek = () => {
+      const weekKey = `coins_week_${selectedWeek}`;
+      if (!settings.processedWeeks?.includes(weekKey)) {
+          alert(`Tuần ${selectedWeek} chưa được tính xu nên không thể hoàn tác.`);
+          return;
+      }
+
+      if (!window.confirm(`CẢNH BÁO: Bạn muốn thu hồi Xu đã phát trong Tuần ${selectedWeek}?\n\nHệ thống sẽ tính toán lại số xu đã phát (dựa trên điểm hiện tại) và trừ đi từ tài khoản học sinh.`)) return;
+
+      let totalDeducted = 0;
+      const newStudents = students.map(s => {
+          if (!s.isActive) return s;
+
+          const rec = records.find(r => r.studentId === s.id && r.week === selectedWeek);
+          const prev = records.find(r => r.studentId === s.id && r.week === selectedWeek - 1);
+          // Re-calculate exactly what would have been given
+          const earned = calculateWeeklyCoins(s, rec, prev, settings);
+          
+          if (earned > 0) {
+              totalDeducted += earned;
+          }
+          const currentBalance = s.balance || 0;
+          return { ...s, balance: Math.max(0, currentBalance - earned) };
+      });
+
+      setStudents(newStudents);
+      saveStudents(newStudents);
+
+      // Remove from processed weeks
+      const newProcessed = (settings.processedWeeks || []).filter(w => w !== weekKey);
+      updateSettings({ processedWeeks: newProcessed });
+
+      alert(`Đã hoàn tác! Thu hồi tổng cộng ${totalDeducted} xu từ lớp.`);
   };
 
   const toggleLockWeek = () => {
@@ -292,7 +346,9 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
              selectedWeek={selectedWeek} setSelectedWeek={setSelectedWeek}
              isLocked={!!isLocked} toggleLockWeek={toggleLockWeek} getWeekLabel={getWeekLabel}
              handleClassBonus={handleClassBonus} handleClassPenalty={handleClassPenalty}
-             handleFillDefault={handleFillDefault} handleCalculateCoinsForWeek={handleCalculateCoinsForWeek}
+             handleFillDefault={handleFillDefault} 
+             handleCalculateCoinsForWeek={handleCalculateCoinsForWeek}
+             handleUndoCoinsForWeek={handleUndoCoinsForWeek}
              handleClearAllWeekData={handleClearAllWeekData} handleScoreChange={handleScoreChange}
              handleTagChange={handleTagChange} handleNoteChange={handleNoteChange} handleClearStudentData={handleClearStudentData}
              handleOpenGamification={handleOpenGamification} setSelectedStudentForDetail={setSelectedStudentForDetail}
