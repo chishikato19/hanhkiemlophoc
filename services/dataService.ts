@@ -59,10 +59,45 @@ const defaultSettings: Settings = {
       cleanSheet: 30
     },
     badges: [
-      { id: 'streak_4', label: 'Chiến binh Bền bỉ', icon: '🔥', type: 'streak_good', threshold: 4, description: '4 tuần liên tiếp đạt Hạnh kiểm Tốt' },
-      { id: 'speak_10', label: 'Nhà Hùng biện', icon: '🗣️', type: 'count_behavior', threshold: 10, targetBehaviorLabel: 'Phát biểu xây dựng bài', description: 'Đạt 10 lần phát biểu xây dựng bài' },
-      { id: 'clean_8', label: 'Thiên thần Áo trắng', icon: '😇', type: 'no_violation_streak', threshold: 8, description: '8 tuần liên tiếp không vi phạm' },
-      { id: 'help_5', label: 'Đại sứ Thân thiện', icon: '🤝', type: 'count_behavior', threshold: 5, targetBehaviorLabel: 'Giúp đỡ bạn bè', description: '5 lần giúp đỡ bạn bè' }
+      // --- NHÓM KỶ LUẬT & NỀ NẾP (Vui nhộn/Nhắc nhở) ---
+      { id: 'style_breaker', label: 'Style Phá Cách', icon: '👕', type: 'count_behavior', threshold: 3, targetBehaviorLabel: 'Đồng phục', description: 'Hay sáng tạo với đồng phục (Cần chỉnh đốn)' },
+      { id: 'loud_speaker', label: 'Cái Loa Phường', icon: '📢', type: 'count_behavior', threshold: 3, targetBehaviorLabel: 'Nói chuyện', description: 'Giọng nói vang xa, át tiếng cô giáo' },
+      { id: 'late_turtle', label: 'Rùa Tốc Độ', icon: '🐢', type: 'count_behavior', threshold: 3, targetBehaviorLabel: 'Đi muộn', description: 'Luôn đến lớp khi trống đã điểm' },
+      { id: 'gossip_king', label: 'Thánh Buôn Chuyện', icon: '🦜', type: 'count_behavior', threshold: 5, targetBehaviorLabel: 'Nói chuyện', description: 'Có quá nhiều câu chuyện để kể trong giờ học' },
+      { id: 'debt_king', label: 'Đại Gia Nợ Bài', icon: '📝', type: 'count_behavior', threshold: 3, targetBehaviorLabel: 'Không làm bài', description: 'Thường xuyên "quên" làm bài tập về nhà' },
+      { id: 'goldfish', label: 'Não Cá Vàng', icon: '🐟', type: 'count_behavior', threshold: 3, targetBehaviorLabel: 'Không soạn bài', description: 'Hay quên sách vở, đồ dùng học tập' },
+      { id: 'sleeping_beauty', label: 'Thánh Ngủ Gật', icon: '😴', type: 'improvement', threshold: 999, description: 'Gán thủ công: Hay mơ màng trong giờ học' },
+      { id: 'messy_king', label: 'Vua Xả Rác', icon: '🗑️', type: 'improvement', threshold: 999, description: 'Gán thủ công: Ngăn bàn luôn đầy giấy vụn' },
+
+      // --- NHÓM HỌC TẬP (Tích cực) ---
+      { id: 'professor', label: 'Giáo Sư Biết Tuốt', icon: '🎓', type: 'count_behavior', threshold: 10, targetBehaviorLabel: 'Phát biểu', description: 'Cái gì cũng biết, hỏi gì cũng giơ tay' },
+      { id: 'speed_god', label: 'Chiến Thần Tốc Độ', icon: '🚀', type: 'count_behavior', threshold: 5, targetBehaviorLabel: 'Làm bài tốt', description: 'Làm bài tập nhanh và chính xác nhất lớp' },
+      { id: 'calligraphy', label: 'Vở Sạch Chữ Đẹp', icon: '✍️', type: 'improvement', threshold: 999, description: 'Gán thủ công: Trình bày bài vở như in' },
+      { id: 'idea_tree', label: 'Cây Sáng Kiến', icon: '💡', type: 'improvement', threshold: 999, description: 'Gán thủ công: Luôn có cách giải bài mới lạ' },
+      { id: 'math_pro', label: 'Thần Đồng Toán Học', icon: '➕', type: 'improvement', threshold: 999, description: 'Gán thủ công: Xuất sắc trong các môn Tự nhiên' },
+      { id: 'literature_soul', label: 'Tâm Hồn Thi Sĩ', icon: '📚', type: 'improvement', threshold: 999, description: 'Gán thủ công: Văn hay chữ tốt' },
+      { id: 'language_master', label: 'Bậc Thầy Ngoại Ngữ', icon: '🔡', type: 'improvement', threshold: 999, description: 'Gán thủ công: Phát âm chuẩn, từ vựng rộng' },
+
+      // --- NHÓM LAO ĐỘNG & XÃ HỘI ---
+      { id: 'clean_hero', label: 'Dũng Sĩ Diệt Khuẩn', icon: '🧹', type: 'count_behavior', threshold: 3, targetBehaviorLabel: 'trực nhật', description: 'Lớp học sạch bong kin kít nhờ bàn tay này' },
+      { id: 'friendly_ambassador', label: 'Đại Sứ Thân Thiện', icon: '🤝', type: 'count_behavior', threshold: 5, targetBehaviorLabel: 'Giúp đỡ', description: 'Luôn sẵn sàng giúp đỡ mọi người' },
+      { id: 'peacemaker', label: 'Người Bảo Vệ', icon: '🛡️', type: 'improvement', threshold: 999, description: 'Gán thủ công: Hay bênh vực kẻ yếu, can ngăn xích mích' },
+      { id: 'comedian', label: 'Cây Hài Nhân Dân', icon: '🤡', type: 'improvement', threshold: 999, description: 'Gán thủ công: Mang lại tiếng cười cho cả lớp' },
+      { id: 'nature_lover', label: 'Người Chăm Sóc', icon: '🌻', type: 'improvement', threshold: 999, description: 'Gán thủ công: Chăm sóc cây cối, góc thiên nhiên' },
+
+      // --- CHUỖI & THÀNH TÍCH CAO (Streak) ---
+      { id: 'fire_warrior', label: 'Chiến Binh Bất Bại', icon: '🔥', type: 'streak_good', threshold: 4, description: '4 tuần liên tiếp đạt Hạnh kiểm Tốt' },
+      { id: 'angel_aura', label: 'Thiên Thần Áo Trắng', icon: '😇', type: 'no_violation_streak', threshold: 8, description: '8 tuần liên tiếp không vi phạm nội quy' },
+      { id: 'rising_star', label: 'Mầm Non Triển Vọng', icon: '🌱', type: 'improvement', threshold: 1, description: 'Có sự tiến bộ vượt bậc so với tuần trước' },
+      { id: 'silent_star', label: 'Sao Im Lặng', icon: '🤫', type: 'no_violation_streak', threshold: 2, description: 'Giữ trật tự rất tốt trong 2 tuần liền' },
+
+      // --- VAI TRÒ & NĂNG KHIẾU (Thủ công) ---
+      { id: 'justice_bao', label: 'Bao Công Nhí', icon: '⚖️', type: 'improvement', threshold: 999, description: 'Gán thủ công: Cán bộ lớp gương mẫu, công tâm' },
+      { id: 'camera_man', label: 'Tai Mắt Của Lớp', icon: '📹', type: 'improvement', threshold: 999, description: 'Gán thủ công: Nắm bắt tình hình lớp siêu nhanh' },
+      { id: 'sport_master', label: 'Kiện Tướng Thể Thao', icon: '⚽', type: 'improvement', threshold: 999, description: 'Gán thủ công: Giỏi các hoạt động vận động' },
+      { id: 'idol_singer', label: 'Giọng Ca Vàng', icon: '🎤', type: 'improvement', threshold: 999, description: 'Gán thủ công: Hát hay, hay hát' },
+      { id: 'artist_pro', label: 'Họa Sĩ Tài Ba', icon: '🎨', type: 'improvement', threshold: 999, description: 'Gán thủ công: Vẽ đẹp, trang trí lớp tốt' },
+      { id: 'tech_wizard', label: 'Phù Thủy Công Nghệ', icon: '💻', type: 'improvement', threshold: 999, description: 'Gán thủ công: Giỏi máy tính, hỗ trợ kỹ thuật cho lớp' }
     ],
     rewards: [
       { id: 'r1', label: 'Kẹo mút', cost: 50, description: 'Một chiếc kẹo ngọt ngào', stock: -1 },
@@ -72,28 +107,79 @@ const defaultSettings: Settings = {
       { id: 'r5', label: 'DJ của lớp', cost: 150, description: 'Được chọn nhạc giờ ra chơi', stock: -1 }
     ],
     avatars: [
-        // Robots
-        { id: 'av1', label: 'Robot Xanh', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Felix', cost: 100 },
-        { id: 'av2', label: 'Mèo Máy', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Aneka', cost: 150 },
-        { id: 'av3', label: 'Robot Chiến Binh', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Zoey', cost: 200 },
-        // Adventurers
-        { id: 'av4', label: 'Siêu Nhân', url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Alexander', cost: 200 },
-        { id: 'av5', label: 'Công Chúa', url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Willow', cost: 200 },
-        { id: 'av6', label: 'Ninja', url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Ninja', cost: 500 },
-        { id: 'av7', label: 'Pháp Sư', url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Magic', cost: 350 },
-        // Fun Emojis
-        { id: 'av8', label: 'Gấu Trúc', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Bear', cost: 300 },
-        { id: 'av9', label: 'Mặt Cười', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Smile', cost: 100 },
-        { id: 'av10', label: 'Mặt Ngầu', url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Cool', cost: 150 },
-        // Artistic
-        { id: 'av11', label: 'Họa Sĩ', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Artist', cost: 250 },
-        { id: 'av12', label: 'Nhạc Công', url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Music', cost: 250 },
-        // Pixel Art
-        { id: 'av13', label: 'Pixel Boy', url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=PixelBoy', cost: 150 },
-        { id: 'av14', label: 'Pixel Girl', url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=PixelGirl', cost: 150 },
-        // Animals
-        { id: 'av15', label: 'Mèo Con', url: 'https://api.dicebear.com/7.x/big-ears-neutral/svg?seed=Cat', cost: 200 },
-        { id: 'av16', label: 'Cún Con', url: 'https://api.dicebear.com/7.x/big-ears-neutral/svg?seed=Dog', cost: 200 }
+        // --- CŨ (Giữ lại) ---
+        { id: 'av1', label: 'Hổ Mạnh Mẽ', url: '🐯', cost: 100 },
+        { id: 'av2', label: 'Mèo May Mắn', url: '😺', cost: 100 },
+        { id: 'av3', label: 'Cún Đáng Yêu', url: '🐶', cost: 100 },
+        { id: 'av4', label: 'Gấu Trúc', url: '🐼', cost: 150 },
+        { id: 'av5', label: 'Kỳ Lân', url: '🦄', cost: 500 },
+        { id: 'av11', label: 'Người Ngoài Hành Tinh', url: '👽', cost: 250 },
+        { id: 'av12', label: 'Robot', url: '🤖', cost: 200 },
+        { id: 'av13', label: 'Bóng Ma Vui Vẻ', url: '👻', cost: 150 },
+        { id: 'av14', label: 'Khủng Long', url: '🦖', cost: 300 },
+        { id: 'av15', label: 'Vua Bóng Đá', url: '⚽', cost: 150 },
+        { id: 'av16', label: 'Game Thủ', url: '🎮', cost: 150 },
+        { id: 'av19', label: 'Ngầu Lòi', url: '😎', cost: 100 },
+        { id: 'av21', label: 'Mặt Hề', url: '🤡', cost: 100 },
+        { id: 'av22', label: 'Yêu Đời', url: '🥰', cost: 100 },
+
+        // --- NGHỀ NGHIỆP NỮ (Mới) ---
+        { id: 'av_f_1', label: 'Bác Sĩ', url: '👩‍⚕️', cost: 300 },
+        { id: 'av_f_2', label: 'Cô Giáo', url: '👩‍🏫', cost: 250 },
+        { id: 'av_f_3', label: 'Họa Sĩ', url: '👩‍🎨', cost: 250 },
+        { id: 'av_f_4', label: 'Ca Sĩ', url: '👩‍🎤', cost: 300 },
+        { id: 'av_f_5', label: 'Phi Hành Gia', url: '👩‍🚀', cost: 350 },
+        { id: 'av_f_6', label: 'Đầu Bếp', url: '👩‍🍳', cost: 200 },
+        { id: 'av_f_7', label: 'Nông Dân', url: '👩‍🌾', cost: 150 },
+        { id: 'av_f_8', label: 'Lập Trình', url: '👩‍💻', cost: 300 },
+        { id: 'av_f_9', label: 'Thám Tử', url: '🕵️‍♀️', cost: 250 },
+        { id: 'av_f_10', label: 'Cảnh Sát', url: '👮‍♀️', cost: 250 },
+        { id: 'av_f_11', label: 'Lính Cứu Hỏa', url: '👩‍🚒', cost: 250 },
+        { id: 'av_f_12', label: 'Thẩm Phán', url: '👩‍⚖️', cost: 350 },
+        { id: 'av_f_13', label: 'Nhà Khoa Học', url: '👩‍🔬', cost: 300 },
+        { id: 'av_f_14', label: 'Phi Công', url: '👩‍✈️', cost: 300 },
+        { id: 'av_f_15', label: 'Doanh Nhân', url: '👩‍💼', cost: 300 },
+
+        // --- NHÂN VẬT CỔ TÍCH / FANTASY NỮ (Mới) ---
+        { id: 'av_f_16', label: 'Tiên Nữ', url: '🧚‍♀️', cost: 400 },
+        { id: 'av_f_17', label: 'Nàng Tiên Cá', url: '🧜‍♀️', cost: 400 },
+        { id: 'av_f_18', label: 'Phù Thủy', url: '🧙‍♀️', cost: 350 },
+        { id: 'av_f_19', label: 'Ma Cà Rồng', url: '🧛‍♀️', cost: 300 },
+        { id: 'av_f_20', label: 'Công Chúa', url: '👸', cost: 500 },
+        { id: 'av_f_21', label: 'Nữ Hoàng', url: '👑', cost: 600 },
+        { id: 'av_f_22', label: 'Thần Đèn', url: '🧞‍♀️', cost: 400 },
+        { id: 'av_f_23', label: 'Yêu Tinh', url: '🧝‍♀️', cost: 350 },
+        { id: 'av_f_24', label: 'Siêu Anh Hùng', url: '🦸‍♀️', cost: 350 },
+        { id: 'av_f_25', label: 'Cô Dâu', url: '👰', cost: 400 },
+
+        // --- HOẠT ĐỘNG & PHONG CÁCH (Mới) ---
+        { id: 'av_f_26', label: 'Vũ Công', url: '💃', cost: 250 },
+        { id: 'av_f_27', label: 'Yoga', url: '🧘‍♀️', cost: 200 },
+        { id: 'av_f_28', label: 'Thể Dục', url: '🤸‍♀️', cost: 200 },
+        { id: 'av_f_29', label: 'Bơi Lội', url: '🏊‍♀️', cost: 200 },
+        { id: 'av_f_30', label: 'Lướt Sóng', url: '🏄‍♀️', cost: 250 },
+        { id: 'av_f_31', label: 'Làm Nail', url: '💅', cost: 150 },
+        { id: 'av_f_32', label: 'Cắt Tóc', url: '💇‍♀️', cost: 150 },
+        { id: 'av_f_33', label: 'Thư Giãn', url: '💆‍♀️', cost: 150 },
+        { id: 'av_f_34', label: 'Mua Sắm', url: '🛍️', cost: 200 },
+
+        // --- DỄ THƯƠNG (Mới) ---
+        { id: 'av_f_35', label: 'Thỏ Con', url: '🐰', cost: 150 },
+        { id: 'av_f_36', label: 'Mèo Con', url: '🐱', cost: 150 },
+        { id: 'av_f_38', label: 'Bướm Xinh', url: '🦋', cost: 150 },
+        { id: 'av_f_40', label: 'Cánh Cụt', url: '🐧', cost: 150 },
+        { id: 'av_f_41', label: 'Hồng Hạc', url: '🦩', cost: 200 },
+        { id: 'av_f_42', label: 'Cá Heo', url: '🐬', cost: 200 },
+
+        // --- CON NGƯỜI (Mới) ---
+        { id: 'av_f_43', label: 'Bạn Gái', url: '👧', cost: 100 },
+        { id: 'av_f_44', label: 'Phụ Nữ', url: '👩', cost: 100 },
+        { id: 'av_f_45', label: 'Tóc Vàng', url: '👱‍♀️', cost: 120 },
+        { id: 'av_f_46', label: 'Tóc Xoăn', url: '👩‍🦱', cost: 120 },
+        { id: 'av_f_47', label: 'Tóc Đỏ', url: '👩‍🦰', cost: 120 },
+        { id: 'av_f_48', label: 'Bà Hiền', url: '👵', cost: 100 },
+        { id: 'av_f_49', label: 'Che Mặt', url: '🙈', cost: 150 },
+        { id: 'av_f_50', label: 'Mẹ Bầu', url: '🤰', cost: 150 }
     ]
   },
   lockedWeeks: [],
@@ -110,7 +196,7 @@ export const seedData = () => {
     isTalkative: i % 5 === 0,
     isActive: true,
     balance: Math.floor(Math.random() * 200), // Random starting coins
-    badges: i < 5 ? ['streak_4'] : [], // Top 5 students have a badge
+    badges: i < 5 ? ['fire_warrior'] : [], // Top 5 students have a badge
     inventory: [],
     avatarUrl: undefined,
     ownedAvatars: []
@@ -299,7 +385,7 @@ export const exportFullData = () => {
     settings: getSettings(),
     gasUrl: getGasUrl(),
     exportDate: new Date().toISOString(),
-    version: '2.2'
+    version: '2.4'
   };
   return JSON.stringify(data, null, 2);
 };

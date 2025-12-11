@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useRef } from 'react';
-import { AlertTriangle, TrendingDown, Repeat, FileQuestion, Search, ImageIcon, Star, User } from 'lucide-react';
+import { AlertTriangle, TrendingDown, Repeat, FileQuestion, Search, ImageIcon, Star, User, Download } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Student, ConductRecord, Settings, AcademicRank } from '../../types';
 import { StudentAnalysis } from '../../utils/analytics';
@@ -77,6 +77,20 @@ const StatsView: React.FC<Props> = ({
 
     const exportClassImage = async () => { if (!classReportRef.current) return; try { const canvas = await html2canvas(classReportRef.current, { scale: 2 }); const link = document.createElement('a'); link.download = `BaoCao_Tuan${selectedWeek}.png`; link.href = canvas.toDataURL(); link.click(); } catch (e) { alert("Lỗi xuất ảnh"); } };
     const exportMultiReportImage = async () => { if (!multiReportRef.current) return; try { const canvas = await html2canvas(multiReportRef.current, { scale: 2 }); const link = document.createElement('a'); link.download = `BaoCao_TongHop_Tuan${statsStartWeek}-${statsEndWeek}.png`; link.href = canvas.toDataURL(); link.click(); } catch (e) { alert("Lỗi xuất ảnh"); } };
+    
+    const exportSingleCard = async (studentName: string, elementId: string) => {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        try {
+            const canvas = await html2canvas(el, { scale: 2 });
+            const link = document.createElement('a');
+            link.download = `BaoCao_${studentName}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        } catch (e) {
+            alert("Lỗi xuất ảnh học sinh này.");
+        }
+    };
 
     return (
         <div className="flex flex-col h-full gap-4">
@@ -238,10 +252,21 @@ const StatsView: React.FC<Props> = ({
                                        if (studentRecords.length === 0) return null;
                                        const avg = Math.round(studentRecords.reduce((acc, cur) => acc + cur.score, 0) / studentRecords.length);
                                        const rank = getRankFromScore(avg);
+                                       const cardId = `multi-report-card-${s.id}`;
+                                       
                                        return (
-                                           <div key={s.id} className="border rounded-lg p-4 bg-gray-50 break-inside-avoid relative hover:shadow-md transition-shadow">
+                                           <div key={s.id} id={cardId} className="border rounded-lg p-4 bg-gray-50 break-inside-avoid relative hover:shadow-md transition-shadow">
                                                <div className="flex justify-between items-start border-b pb-2 mb-2">
-                                                    <button onClick={() => setSelectedStudentForDetail(s)} className="font-bold text-lg text-indigo-700 hover:underline flex items-center gap-2">{s.name} <User size={16}/></button>
+                                                    <div className="flex items-center gap-2">
+                                                        <button onClick={() => setSelectedStudentForDetail(s)} className="font-bold text-lg text-indigo-700 hover:underline flex items-center gap-2">{s.name} <User size={16}/></button>
+                                                        <button 
+                                                            onClick={() => exportSingleCard(s.name, cardId)} 
+                                                            className="text-gray-400 hover:text-indigo-600 p-1" 
+                                                            title="Lưu ảnh thẻ này"
+                                                        >
+                                                            <Download size={14} />
+                                                        </button>
+                                                    </div>
                                                     <div className="text-right">
                                                         <div className="text-xs text-gray-500">Trung bình giai đoạn</div>
                                                         <span className={`text-sm font-bold px-2 py-0.5 rounded ${getRankColor(rank)}`}>{avg}đ - {rank}</span>

@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { getLogs, clearLogs } from '../utils/logger';
 import { LogEntry } from '../types';
 import { seedData, getGasUrl, saveGasUrl, exportFullData, importFullData } from '../services/dataService';
-import { Bug, Database, Book, History, GitCommit, Download, Upload, Cloud, Save, Copy } from 'lucide-react';
+import { Bug, Database, Book, History, GitCommit, Download, Upload, Cloud, Save, Copy, Smile, UserCheck } from 'lucide-react';
 
 const Documentation: React.FC = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -74,7 +75,7 @@ const Documentation: React.FC = () => {
             onClick={() => setActiveSubTab('guide')}
             className={`px-4 py-2 font-medium rounded-t-lg whitespace-nowrap ${activeSubTab === 'guide' ? 'bg-white text-indigo-600 border border-b-0' : 'text-gray-500 hover:text-indigo-600'}`}
         >
-            Kết nối Online
+            Kết nối Google Sheet (Quan trọng)
         </button>
         <button 
             onClick={() => setActiveSubTab('version')}
@@ -127,15 +128,15 @@ const Documentation: React.FC = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                      <div className="bg-indigo-50 p-5 rounded-xl border border-indigo-200 col-span-2">
-                         <h4 className="font-bold text-lg mb-2 text-indigo-700">Mới: Chế độ Đăng nhập & Học sinh</h4>
+                         <h4 className="font-bold text-lg mb-2 text-indigo-700">Mới: Avatar & Cửa hàng</h4>
                          <ul className="list-disc list-inside text-sm space-y-2">
-                             <li><strong>Giáo viên:</strong> Dùng mật khẩu (Mặc định: 123456) để vào quản trị.</li>
-                             <li><strong>Học sinh:</strong> Dùng Mã lớp (Mặc định: 1111) để vào giao diện báo cáo.</li>
-                             <li><strong>Inbox:</strong> Giáo viên vào tab "Inbox" để duyệt các báo cáo do học sinh gửi lên.</li>
+                             <li><strong>Mua Avatar:</strong> Học sinh có thể dùng Xu để mua hình đại diện mới trong Cửa hàng.</li>
+                             <li><strong>Trang bị:</strong> Sau khi mua, bấm "Trang bị" để thay đổi hình đại diện hiển thị trên bảng lớp.</li>
+                             <li><strong>Cấu hình:</strong> Giáo viên có thể thêm/xóa Avatar và đặt giá tiền trong mục Cấu hình.</li>
                          </ul>
                      </div>
 
-                    <div className="bg-gray-50 p-5 rounded-xl border">
+                     <div className="bg-gray-50 p-5 rounded-xl border">
                         <h4 className="font-bold text-lg mb-2 text-indigo-600">1. Quản lý Học sinh</h4>
                         <ul className="list-disc list-inside text-sm space-y-2">
                             <li><strong>Thêm mới/Import:</strong> Nhập từ Excel dễ dàng.</li>
@@ -157,18 +158,31 @@ const Documentation: React.FC = () => {
 
         {activeSubTab === 'guide' && (
             <div className="prose max-w-none text-gray-700">
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Cloud size={24}/> Hướng dẫn Kết nối Google Sheets</h3>
-                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 text-sm mb-4">
-                    <strong>CẬP NHẬT QUAN TRỌNG (v2.2.1):</strong> Vui lòng cập nhật đoạn mã bên dưới vào Google Apps Script để khắc phục lỗi mất dữ liệu Xu và Huy hiệu khi đồng bộ.
+                <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Cloud size={24}/> Hướng dẫn Kết nối Google Sheets (Chi tiết)</h3>
+                
+                <div className="bg-white border-l-4 border-indigo-500 p-4 shadow-sm mb-6">
+                    <h4 className="font-bold text-indigo-700 mb-2">Tại sao cần làm bước này?</h4>
+                    <p className="text-sm">Để dữ liệu (Học sinh, Điểm, Xu, Avatar) được lưu vĩnh viễn và không bị mất khi bạn tải lại trang hoặc dùng máy khác. Dữ liệu sẽ được lưu trên Google Drive của chính bạn.</p>
                 </div>
 
-                <div className="bg-gray-100 p-4 rounded text-sm text-gray-600">
-                        <div className="flex justify-between items-center mb-2">
-                            <h4 className="font-bold text-indigo-700">Mã Script Mới (v2.2.1):</h4>
-                        </div>
-                        <pre className="bg-gray-800 text-gray-100 p-3 rounded text-xs overflow-x-auto font-mono whitespace-pre-wrap select-all">
+                <div className="space-y-6">
+                    <div>
+                        <h4 className="font-bold text-gray-800 flex items-center gap-2"><span className="bg-gray-800 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span> Tạo Google Sheet</h4>
+                        <p className="text-sm ml-8">Truy cập <a href="https://sheets.new" target="_blank" className="text-blue-600 underline">sheets.new</a> để tạo một file Excel mới. Đặt tên file là "QuanLyLopHoc".</p>
+                    </div>
+
+                    <div>
+                        <h4 className="font-bold text-gray-800 flex items-center gap-2"><span className="bg-gray-800 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span> Mở Script Editor</h4>
+                        <p className="text-sm ml-8">Trên thanh menu Google Sheet, chọn <strong>Extensions (Tiện ích mở rộng)</strong> &rarr; <strong>Apps Script</strong>.</p>
+                    </div>
+
+                    <div>
+                        <h4 className="font-bold text-gray-800 flex items-center gap-2"><span className="bg-gray-800 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">3</span> Dán mã Script</h4>
+                        <p className="text-sm ml-8 mb-2">Xóa hết mã cũ trong file <code>Code.gs</code> và dán toàn bộ đoạn mã dưới đây vào:</p>
+                        <div className="ml-8 relative">
+                             <pre className="bg-gray-800 text-gray-100 p-3 rounded text-xs overflow-x-auto font-mono whitespace-pre-wrap select-all max-h-60 overflow-y-auto">
 {`function doGet(e) {
-  return ContentService.createTextOutput("Smart Classroom API v2.2 is running.");
+  return ContentService.createTextOutput("Smart Classroom API v2.2.2 is running.");
 }
 
 function doPost(e) {
@@ -180,7 +194,7 @@ function doPost(e) {
     if (payload.action === 'save') {
       var data = payload.data;
       
-      // Save Students as JSON to preserve coins/inventory
+      // Save Students as JSON (This preserves Avatars, Inventory, Coins correctly)
       var sSheet = getSheet(sheet, 'Students'); sSheet.clear();
       if (data.students && data.students.length > 0) {
         // ID | Name | JSON Data
@@ -222,7 +236,6 @@ function doPost(e) {
          result.students = rows.map(r => {
              try { return JSON.parse(r[2]); } 
              catch(e) { 
-                 // Fallback for old data format
                  return {id: r[0], name: r[1], gender: 'Nam', rank: 'Đạt', isTalkative: false}; 
              }
          });
@@ -256,7 +269,6 @@ function doPost(e) {
        var sSheet = sheet.getSheetByName('Students');
        var names = [];
        if (sSheet && sSheet.getLastRow() > 0) {
-          // Get ID and Name
           var rows = sSheet.getRange(1, 1, sSheet.getLastRow(), 2).getValues();
           names = rows.map(r => ({id: r[0], name: r[1]}));
        }
@@ -301,7 +313,7 @@ function doPost(e) {
        var inboxSheet = sheet.getSheetByName('Inbox_Logs');
        var reports = [];
        if (inboxSheet && inboxSheet.getLastRow() > 0) {
-          var rows = inboxSheet.getRange(1, 6, inboxSheet.getLastRow(), 1).getValues(); // Get JSON col
+          var rows = inboxSheet.getRange(1, 6, inboxSheet.getLastRow(), 1).getValues();
           reports = rows.map(r => JSON.parse(r[0]));
        }
        return response({status: 'success', data: reports});
@@ -322,8 +334,28 @@ function response(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
 }`}
-                        </pre>
-                     </div>
+                            </pre>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 className="font-bold text-gray-800 flex items-center gap-2"><span className="bg-gray-800 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">4</span> Triển khai (Deploy)</h4>
+                        <ol className="list-decimal ml-10 text-sm space-y-1">
+                            <li>Bấm nút <strong>Deploy (Triển khai)</strong> màu xanh góc trên bên phải &rarr; chọn <strong>New deployment (Bài triển khai mới)</strong>.</li>
+                            <li>Bấm biểu tượng bánh răng chọn <strong>Web app</strong>.</li>
+                            <li><strong>Description:</strong> Nhập gì cũng được (vd: v1).</li>
+                            <li><strong>Execute as (Thực thi dưới dạng):</strong> Chọn <em>"Me (Chính tôi)"</em>.</li>
+                            <li><strong>Who has access (Ai có quyền truy cập):</strong> <span className="text-red-600 font-bold">Bắt buộc chọn "Anyone (Bất kỳ ai)"</span>.</li>
+                            <li>Bấm <strong>Deploy</strong>. Cấp quyền truy cập nếu được hỏi (Chọn Advanced &rarr; Go to ... (unsafe)).</li>
+                            <li>Copy <strong>Web App URL</strong> (có đuôi <code>/exec</code>).</li>
+                        </ol>
+                    </div>
+
+                    <div>
+                        <h4 className="font-bold text-gray-800 flex items-center gap-2"><span className="bg-gray-800 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">5</span> Dán URL vào App</h4>
+                        <p className="text-sm ml-8">Quay lại đây, vào tab <strong>Dữ liệu (Backup)</strong> bên dưới và dán URL vào ô "Google Apps Script Web App URL". Bấm Lưu.</p>
+                    </div>
+                </div>
             </div>
         )}
         
@@ -331,35 +363,37 @@ function response(data) {
             <div className="max-w-3xl">
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-indigo-700"><History size={24}/> Lịch sử Cập nhật</h3>
                 <div className="relative border-l-2 border-indigo-200 ml-3 space-y-8 pl-6 py-2">
-                     {/* v2.2.1 */}
+                     {/* v2.4 */}
                      <div className="relative">
-                        <span className="absolute -left-[33px] bg-red-600 text-white rounded-full p-1.5 ring-4 ring-red-50"><Bug size={16}/></span>
-                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 2.2.1 (Hotfix)</h4>
-                        <span className="text-xs text-gray-500 font-mono">Sửa lỗi Logic</span>
+                        <span className="absolute -left-[33px] bg-purple-600 text-white rounded-full p-1.5 ring-4 ring-purple-50"><UserCheck size={16}/></span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 2.4</h4>
+                        <span className="text-xs text-gray-500 font-mono">Danh hiệu & Báo cáo</span>
                         <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
-                            <li><strong>Sửa lỗi Race Condition:</strong> Khắc phục tình trạng khi bấm "Tính Xu", dữ liệu Xu vừa cộng bị ghi đè bởi quy trình tính Danh hiệu ngay sau đó.</li>
-                            <li><strong>Logic Tuần tự:</strong> Đảm bảo hệ thống tính toán xong Xu rồi mới dùng kết quả đó để xét duyệt Danh hiệu.</li>
+                            <li><strong>Danh hiệu mới:</strong> Cập nhật hệ thống huy hiệu vui nhộn (Loa Phường, Giáo Sư...).</li>
+                            <li><strong>Gán thủ công:</strong> Giáo viên có thể tặng/thu hồi danh hiệu thủ công trong Shop.</li>
+                            <li><strong>Xuất báo cáo:</strong> Cho phép tải ảnh báo cáo chi tiết của từng học sinh riêng biệt.</li>
+                            <li><strong>Hiển thị Avatar:</strong> Thêm Avatar vào bảng nhập liệu hàng tuần.</li>
+                        </ul>
+                    </div>
+                     {/* v2.3 */}
+                     <div className="relative">
+                        <span className="absolute -left-[33px] bg-blue-600 text-white rounded-full p-1.5 ring-4 ring-blue-50"><Smile size={16}/></span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 2.3</h4>
+                        <span className="text-xs text-gray-500 font-mono">Avatar & Cá nhân hóa</span>
+                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
+                            <li><strong>Hệ thống Avatar:</strong> Thêm chức năng mua, trang bị hình đại diện cho học sinh.</li>
+                            <li><strong>Hiển thị:</strong> Avatar hiển thị trực quan trong danh sách lớp và bảng vinh danh.</li>
+                            <li><strong>Cấu hình:</strong> Giáo viên có thể thêm/xóa/sửa giá các Avatar trong Settings.</li>
                         </ul>
                     </div>
                      {/* v2.2 */}
                      <div className="relative">
                         <span className="absolute -left-[33px] bg-green-600 text-white rounded-full p-1.5 ring-4 ring-green-50"><GitCommit size={16}/></span>
-                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 2.2</h4>
+                        <h4 className="font-bold text-lg text-gray-600">Phiên bản 2.2</h4>
                         <span className="text-xs text-gray-500 font-mono">Đồng bộ Dữ liệu</span>
                         <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
-                            <li><strong>Sửa lỗi Đồng bộ:</strong> Cập nhật mã Script để lưu trữ đầy đủ thông tin Xu, Túi đồ và Huy hiệu của học sinh lên Google Sheet (không còn bị mất khi tải về).</li>
-                            <li><strong>Hiển thị Xu:</strong> Thêm hiển thị số dư Xu ngay trong bảng nhập liệu hạnh kiểm để tiện theo dõi.</li>
-                            <li><strong>Xử lý lỗi Cloud:</strong> Cải thiện thông báo lỗi khi URL Google Sheet chưa chính xác.</li>
-                        </ul>
-                    </div>
-                     {/* v2.1 */}
-                     <div className="relative">
-                        <span className="absolute -left-[33px] bg-indigo-600 text-white rounded-full p-1.5 ring-4 ring-indigo-50"><GitCommit size={16}/></span>
-                        <h4 className="font-bold text-lg text-gray-600">Phiên bản 2.1</h4>
-                        <span className="text-xs text-gray-500 font-mono">Cải tiến Nhập liệu</span>
-                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
-                            <li><strong>Chọn nhiều học sinh:</strong> Giao diện Cổng thông tin cho phép chọn nhiều học sinh cùng lúc khi điểm danh.</li>
-                            <li><strong>Danh sách lỗi thông minh:</strong> Học sinh chọn lỗi từ danh sách có sẵn thay vì tự gõ.</li>
+                            <li><strong>Sửa lỗi Đồng bộ:</strong> Cập nhật mã Script để lưu trữ đầy đủ thông tin Xu, Túi đồ và Huy hiệu.</li>
+                            <li><strong>Hiển thị Xu:</strong> Thêm hiển thị số dư Xu ngay trong bảng nhập liệu.</li>
                         </ul>
                     </div>
                 </div>
@@ -418,6 +452,7 @@ function response(data) {
                                 {isSaved ? 'Đã lưu!' : <><Save size={18}/> Lưu</>}
                             </button>
                         </div>
+                        <p className="text-xs text-gray-500 mt-2">Xem hướng dẫn chi tiết ở tab "Kết nối Google Sheet" để lấy URL.</p>
                      </div>
                 </section>
             </div>
