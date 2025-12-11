@@ -186,13 +186,6 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   const handleClearStudentData = (studentId: string) => { if (isLocked) return; if(!window.confirm("Xóa dữ liệu tuần này?")) return; updateRecord(studentId, selectedWeek, { score: settings.defaultScore, violations: [], positiveBehaviors: [], note: '' }); };
   
   const handleCalculateCoinsForWeek = () => {
-      // 1. Check Locked
-      if (!isLocked) {
-          alert("Vui lòng KHÓA Tuần này trước khi tính Xu.\n(Để đảm bảo dữ liệu hạnh kiểm không thay đổi trong quá trình tính toán).");
-          return;
-      }
-
-      // 2. Check Processed
       const weekKey = `coins_week_${selectedWeek}`;
       if (settings.processedWeeks?.includes(weekKey)) {
           alert(`Bạn đã tính xu cho Tuần ${selectedWeek} rồi! Nếu muốn tính lại, hãy dùng nút "Hoàn tác Xu" trước.`);
