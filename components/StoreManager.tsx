@@ -133,21 +133,25 @@ const StoreManager: React.FC = () => {
                         <Coins size={12}/> {student.balance || 0}
                     </div>
 
-                    <div className="w-16 h-16 rounded-full flex items-center justify-center text-5xl mb-3 group-hover:scale-110 transition-transform bg-gray-50 border-2 border-transparent group-hover:border-orange-200">
-                        {student.avatarUrl ? (
-                            <span>{student.avatarUrl}</span>
-                        ) : (
-                            <span className="text-2xl font-bold text-gray-600">{student.name.charAt(0)}</span>
-                        )}
+                    {/* Avatar with Frame */}
+                    <div className="w-20 h-20 relative flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                         {student.frameUrl && <img src={student.frameUrl} className="absolute inset-0 w-full h-full z-10 scale-125 pointer-events-none" alt="" />}
+                         <div className="w-16 h-16 rounded-full bg-gray-50 border-2 border-transparent group-hover:border-orange-200 flex items-center justify-center text-5xl overflow-hidden z-0">
+                             {student.avatarUrl ? (
+                                 <span>{student.avatarUrl}</span>
+                             ) : (
+                                 <span className="text-2xl font-bold text-gray-600">{student.name.charAt(0)}</span>
+                             )}
+                         </div>
                     </div>
                     
                     <h3 className="font-bold text-gray-800 text-sm mb-1 group-hover:text-orange-700 line-clamp-1">{student.name}</h3>
                     
-                    {/* Badges Preview */}
-                    <div className="flex gap-1 h-5 justify-center mb-2">
-                         {student.badges?.slice(0, 3).map(bid => {
+                    {/* Badges Preview - Large */}
+                    <div className="flex gap-0.5 h-6 justify-center mb-2">
+                         {student.badges?.slice(0, 5).map(bid => {
                              const badge = settings.gamification.badges.find(b => b.id === bid);
-                             return badge ? <span key={bid} title={badge.label} className="text-xs">{badge.icon}</span> : null;
+                             return badge ? <span key={bid} title={badge.label} className="text-lg">{badge.icon}</span> : null;
                          })}
                     </div>
 
