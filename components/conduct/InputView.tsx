@@ -106,6 +106,10 @@ const InputView: React.FC<Props> = ({
                             const rec = records.find(r => r.studentId === s.id && r.week === selectedWeek);
                             const score = rec ? rec.score : '';
                             const rank = rec ? getRankFromScore(rec.score) : '-';
+                            const badgesToShow = s.badges 
+                                ? ((s.displayedBadges && s.displayedBadges.length > 0) ? s.displayedBadges : s.badges.slice(0, 5)) 
+                                : [];
+
                             return (
                                 <tr key={s.id} className="hover:bg-indigo-50 transition-colors group">
                                     <td className="p-3 text-gray-400 text-xs text-center">{idx + 1}</td>
@@ -122,7 +126,7 @@ const InputView: React.FC<Props> = ({
                                             <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded flex items-center gap-0.5 border border-yellow-200 font-bold" title="Số dư xu">
                                                 <Coins size={10}/> {s.balance || 0}
                                             </span>
-                                            {s.badges?.slice(0, 5).map(bid => {
+                                            {badgesToShow.map(bid => {
                                                 const badge = settings.gamification.badges.find(b => b.id === bid);
                                                 return badge ? <span key={bid} title={badge.label} className="text-sm leading-none">{badge.icon}</span> : null;
                                             })}

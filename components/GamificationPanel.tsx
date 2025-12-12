@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Student, Settings, RewardItem, BadgeConfig, AvatarItem, FrameItem } from '../types';
-import { ShoppingBag, Award, Coins, AlertCircle, Backpack, Check, Ticket, User, Smile, PlusCircle, Trash2, LayoutTemplate } from 'lucide-react';
+import { ShoppingBag, Award, Coins, AlertCircle, Backpack, Check, Ticket, User, Smile, PlusCircle, Trash2, LayoutTemplate, Pin, Eye, EyeOff } from 'lucide-react';
 import { purchaseItem, useItem, purchaseAvatar, equipAvatar, purchaseFrame, equipFrame } from '../utils/gamification';
 import { addLog } from '../utils/logger';
 
@@ -82,13 +82,32 @@ const GamificationPanel: React.FC<Props> = ({ student, settings, onUpdateStudent
         if (hasBadge) {
             if(!window.confirm("Bạn muốn THU HỒI danh hiệu này?")) return;
             const newBadges = (student.badges || []).filter(b => b !== badgeId);
-            onUpdateStudent({ ...student, badges: newBadges });
+            const newDisplayed = (student.displayedBadges || []).filter(b => b !== badgeId);
+            onUpdateStudent({ ...student, badges: newBadges, displayedBadges: newDisplayed });
             addLog('GAME', `${student.name} bị thu hồi danh hiệu: ${badgeId}`);
         } else {
             if(!window.confirm("Bạn muốn TẶNG danh hiệu này cho học sinh?")) return;
             const newBadges = [...(student.badges || []), badgeId];
             onUpdateStudent({ ...student, badges: newBadges });
             addLog('GAME', `${student.name} được tặng danh hiệu: ${badgeId}`);
+        }
+    };
+
+    const handleToggleDisplayBadge = (e: React.MouseEvent, badgeId: string) => {
+        e.stopPropagation();
+        const currentDisplayed = student.displayedBadges || [];
+        const isDisplayed = currentDisplayed.includes(badgeId);
+
+        if (isDisplayed) {
+            const newDisplayed = currentDisplayed.filter(id => id !== badgeId);
+            onUpdateStudent({ ...student, displayedBadges: newDisplayed });
+        } else {
+            if (currentDisplayed.length >= 5) {
+                alert("Chỉ được ghim tối đa 5 danh hiệu! Hãy bỏ ghim danh hiệu khác trước.");
+                return;
+            }
+            const newDisplayed = [...currentDisplayed, badgeId];
+            onUpdateStudent({ ...student, displayedBadges: newDisplayed });
         }
     };
 
@@ -235,12 +254,26 @@ const GamificationPanel: React.FC<Props> = ({ student, settings, onUpdateStudent
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {settings.gamification.badges.map(badge => {
                                 const isUnlocked = (student.badges || []).includes(badge.id);
+                                const isDisplayed = (student.displayedBadges || []).includes(badge.id);
                                 return (
-                                    <div key={badge.id} onClick={() => handleToggleBadge(badge.id, isUnlocked)} className={`flex items-center p-4 rounded-xl border-2 transition-all cursor-pointer hover:shadow-md ${isUnlocked ? 'bg-white border-indigo-100 shadow-sm' : 'bg-gray-100 border-gray-200 opacity-80 grayscale hover:grayscale-0'}`}>
+                                    <div key={badge.id} onClick={() => handleToggleBadge(badge.id, isUnlocked)} className={`flex items-center p-4 rounded-xl border-2 transition-all cursor-pointer hover:shadow-md relative group ${isUnlocked ? 'bg-white border-indigo-100 shadow-sm' : 'bg-gray-100 border-gray-200 opacity-80 grayscale hover:grayscale-0'}`}>
+                                        
+                                        {/* Pin/Display Button - Only for unlocked badges */}
+                                        {isUnlocked && (
+                                            <button 
+                                                onClick={(e) => handleToggleDisplayBadge(e, badge.id)}
+                                                className={`absolute top-2 right-2 p-1.5 rounded-full z-10 transition-colors ${isDisplayed ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-400 hover:text-indigo-600'}`}
+                                                title={isDisplayed ? "Bỏ ghim" : "Ghim lên bảng (Tối đa 5)"}
+                                            >
+                                                {isDisplayed ? <Eye size={16} /> : <EyeOff size={16} />}
+                                            </button>
+                                        )}
+
                                         <div className={`w-16 h-16 rounded-full flex items-center justify-center text-4xl mr-4 ${isUnlocked ? 'bg-indigo-50' : 'bg-gray-200'}`}>{badge.icon}</div>
                                         <div className="flex-1">
-                                            <div className="flex justify-between items-start">
+                                            <div className="flex justify-between items-start mr-6">
                                                 <h3 className={`font-bold ${isUnlocked ? 'text-indigo-900' : 'text-gray-500'}`}>{badge.label}</h3>
+                                                {/* Hidden remove/add button for manual override */}
                                                 <div className="text-gray-400 opacity-0 group-hover:opacity-100">{isUnlocked ? <Trash2 size={14} className="hover:text-red-500"/> : <PlusCircle size={14} className="hover:text-green-500"/>}</div>
                                             </div>
                                             <p className="text-xs text-gray-500 mt-1">{badge.description}</p>

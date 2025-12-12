@@ -164,6 +164,11 @@ const SeatingMap: React.FC<Props> = ({ setHasUnsavedChanges }) => {
 
     const isDragging = draggedSeat?.row === r && draggedSeat?.col === c;
 
+    // Get badges to display: Use displayedBadges first, fallback to first 5
+    const badgesToShow = student && student.badges 
+        ? ((student.displayedBadges && student.displayedBadges.length > 0) ? student.displayedBadges : student.badges.slice(0, 5)) 
+        : [];
+
     return (
         <div 
             key={`${r}-${c}`}
@@ -191,10 +196,10 @@ const SeatingMap: React.FC<Props> = ({ setHasUnsavedChanges }) => {
                          </div>
                     </div>
                     
-                    {/* Icons/Badges Row - UPDATED: Show 5 badges, Larger size */}
-                    <div className="flex gap-0.5 mt-0.5 justify-center w-full flex-wrap">
+                    {/* Icons/Badges Row - UPDATED: Show displayedBadges */}
+                    <div className="flex gap-0.5 mt-0.5 justify-center w-full flex-wrap h-5 content-start">
                          {student.isTalkative && <span title="Hay nói chuyện" className="text-sm bg-red-100 text-red-600 px-1 rounded font-bold">⚠</span>}
-                         {student.badges?.slice(0, 5).map(bid => {
+                         {badgesToShow.map(bid => {
                              const badge = settings.gamification.badges.find(b => b.id === bid);
                              return badge ? <span key={bid} title={badge.label} className="text-sm">{badge.icon}</span> : null;
                          })}
@@ -266,7 +271,7 @@ const SeatingMap: React.FC<Props> = ({ setHasUnsavedChanges }) => {
             <ul className="list-disc ml-4 mt-1 space-y-1">
                 <li>Học sinh có Khung hình và Avatar sẽ hiển thị trực tiếp.</li>
                 <li><span className="text-red-500 font-bold">⚠</span> : Học sinh hay nói chuyện.</li>
-                <li>Biểu tượng lớn bên dưới tên là Danh hiệu (Huy hiệu) học sinh đạt được (Hiển thị tối đa 5).</li>
+                <li>Biểu tượng danh hiệu hiển thị dựa trên những gì bạn đã "Ghim" trong Cửa hàng (hoặc 5 cái đầu tiên).</li>
             </ul>
          </div>
       </div>
