@@ -25,6 +25,7 @@ export interface Student {
   isActive?: boolean;
   balance?: number; // Coin balance
   badges?: string[]; // Array of Badge IDs unlocked
+  displayedBadges?: string[]; // NEW: Specific badges selected by teacher to display (Max 5)
   inventory?: InventoryItem[]; // Items purchased
   avatarUrl?: string; // Current avatar URL
   ownedAvatars?: string[]; // List of Avatar IDs owned

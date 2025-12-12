@@ -68,16 +68,24 @@ const StoreManager: React.FC = () => {
 
   const handleOpenShop = (student: Student) => {
       // Refresh badges when opening shop
+      // NOTE: checkBadges now handles removals/revocations too.
       const currentStudentData = students.find(s => s.id === student.id) || student;
-      const unlocked = checkBadges(currentStudentData, records, settings);
+      const finalBadges = checkBadges(currentStudentData, records, settings);
       
       let updatedStudent = { ...currentStudentData };
+      const oldBadges = currentStudentData.badges || [];
       
-      // If new badges found, update student immediately
-      if (unlocked.some(b => !(currentStudentData.badges || []).includes(b))) {
-          const newBadges = Array.from(new Set([...(currentStudentData.badges || []), ...unlocked]));
-          updatedStudent = { ...currentStudentData, badges: newBadges };
+      // Update if badges changed (added or removed)
+      const hasChanged = finalBadges.length !== oldBadges.length || !finalBadges.every(b => oldBadges.includes(b));
+
+      if (hasChanged) {
+          updatedStudent = { ...currentStudentData, badges: finalBadges };
           
+          // Clean up displayedBadges if one got revoked
+          if (updatedStudent.displayedBadges) {
+              updatedStudent.displayedBadges = updatedStudent.displayedBadges.filter(b => finalBadges.includes(b));
+          }
+
           const newAll = students.map(s => s.id === student.id ? updatedStudent : s);
           setStudents(newAll);
           saveStudents(newAll);
@@ -122,7 +130,12 @@ const StoreManager: React.FC = () => {
 
        {/* Student Grid */}
        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {filteredStudents.map(student => (
+            {filteredStudents.map(student => {
+                const badgesToShow = student.badges 
+                    ? ((student.displayedBadges && student.displayedBadges.length > 0) ? student.displayedBadges : student.badges.slice(0, 5)) 
+                    : [];
+                
+                return (
                 <div 
                     key={student.id} 
                     onClick={() => handleOpenShop(student)}
@@ -149,7 +162,7 @@ const StoreManager: React.FC = () => {
                     
                     {/* Badges Preview - Large */}
                     <div className="flex gap-0.5 h-6 justify-center mb-2">
-                         {student.badges?.slice(0, 5).map(bid => {
+                         {badgesToShow.map(bid => {
                              const badge = settings.gamification.badges.find(b => b.id === bid);
                              return badge ? <span key={bid} title={badge.label} className="text-lg">{badge.icon}</span> : null;
                          })}
@@ -159,7 +172,7 @@ const StoreManager: React.FC = () => {
                         <Gift size={12} /> Vào cửa hàng
                     </button>
                 </div>
-            ))}
+            )})}
        </div>
 
        {/* Shop Modal */}

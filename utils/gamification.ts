@@ -39,50 +39,83 @@ export const calculateWeeklyCoins = (
 };
 
 /**
- * Analyze student history to find new unlocked badges.
+ * Analyze student history to find newly unlocked badges AND revoke badges if streaks are broken.
+ * Returns the FULL updated list of badges for the student.
  */
 export const checkBadges = (
     student: Student,
     records: ConductRecord[],
     settings: Settings
 ): string[] => {
-    const studentRecords = records
+    // Sort records descending (newest first) to check current streaks
+    const studentRecordsDesc = records
         .filter(r => r.studentId === student.id)
-        .sort((a, b) => a.week - b.week);
+        .sort((a, b) => b.week - a.week); // Week 10, 9, 8...
     
-    const unlockedBadges: Set<string> = new Set(student.badges || []);
+    // Sort ascending for cumulative counts
+    const studentRecordsAsc = [...studentRecordsDesc].reverse();
+
+    const currentBadges: Set<string> = new Set(student.badges || []);
+    const finalBadges: Set<string> = new Set(currentBadges);
     
     settings.gamification.badges.forEach(badge => {
-        if (unlockedBadges.has(badge.id)) return; // Already has it
+        let isEligible = false;
 
-        let unlocked = false;
-
+        // --- CHECK 1: Streak Badges (Can be revoked) ---
         if (badge.type === 'streak_good') {
+            // Check strictly the LAST N records. 
+            // If the student misses a week of data, we skip it? Or count as break? 
+            // Let's assume we check the last N *available* records, but strictly sequential weeks logic is harder.
+            // Simplified: Check the last N records present.
+            
             let streak = 0;
-            let maxStreak = 0;
-            studentRecords.forEach(r => {
-                if (r.score >= settings.thresholds.good) streak++;
-                else streak = 0;
-                if (streak > maxStreak) maxStreak = streak;
-            });
-            if (maxStreak >= badge.threshold) unlocked = true;
+            // Iterate backwards from most recent
+            for (const r of studentRecordsDesc) {
+                if (r.score >= settings.thresholds.good) {
+                    streak++;
+                } else {
+                    break; // Streak broken
+                }
+            }
+            isEligible = streak >= badge.threshold;
+            
+            // Logic:
+            // If Eligible -> Add/Keep
+            // If Not Eligible AND currently has it -> Revoke (Remove)
+            if (isEligible) {
+                finalBadges.add(badge.id);
+            } else if (currentBadges.has(badge.id)) {
+                finalBadges.delete(badge.id); // REVOKE
+            }
         }
 
-        if (badge.type === 'no_violation_streak') {
+        else if (badge.type === 'no_violation_streak') {
             let streak = 0;
-            let maxStreak = 0;
-            studentRecords.forEach(r => {
-                if (r.violations.length === 0) streak++;
-                else streak = 0;
-                if (streak > maxStreak) maxStreak = streak;
-            });
-            if (maxStreak >= badge.threshold) unlocked = true;
+            for (const r of studentRecordsDesc) {
+                if (r.violations.length === 0) {
+                    streak++;
+                } else {
+                    break; // Streak broken
+                }
+            }
+            isEligible = streak >= badge.threshold;
+
+            if (isEligible) {
+                finalBadges.add(badge.id);
+            } else if (currentBadges.has(badge.id)) {
+                finalBadges.delete(badge.id); // REVOKE
+            }
         }
 
-        if (badge.type === 'count_behavior' && badge.targetBehaviorLabel) {
+        // --- CHECK 2: Cumulative/Milestone Badges (Usually permanent) ---
+        // For these, we typically only ADD, rarely revoke unless manual.
+        // However, if you want stricter logic, we can recalculate completely.
+        // Let's keep them permanent (Add only) unless manual removal, 
+        // to avoid losing "100 times" badge just because this week is 0.
+        else if (badge.type === 'count_behavior' && badge.targetBehaviorLabel) {
             let count = 0;
             const target = badge.targetBehaviorLabel.toLowerCase();
-            studentRecords.forEach(r => {
+            studentRecordsAsc.forEach(r => {
                 if (r.positiveBehaviors) {
                     r.positiveBehaviors.forEach(p => {
                         const cleanP = p.replace(/\([+-]?\d+đ\)/, '').trim().toLowerCase();
@@ -90,15 +123,29 @@ export const checkBadges = (
                     });
                 }
             });
-            if (count >= badge.threshold) unlocked = true;
+            if (count >= badge.threshold) {
+                finalBadges.add(badge.id);
+            }
         }
-
-        if (unlocked) {
-            unlockedBadges.add(badge.id);
+        else if (badge.type === 'improvement') {
+            // "Improvement" is vague for a badge. Usually manual or one-time trigger.
+            // We preserve existing manual assignments.
+            // If we want auto-assignment:
+            // Check if ANY record showed improvement.
+            if (badge.threshold < 999) { // 999 usually marks manual
+                 let hasImprovement = false;
+                 for (let i = 1; i < studentRecordsAsc.length; i++) {
+                     if (studentRecordsAsc[i].score > studentRecordsAsc[i-1].score + 10) {
+                         hasImprovement = true;
+                         break;
+                     }
+                 }
+                 if (hasImprovement) finalBadges.add(badge.id);
+            }
         }
     });
 
-    return Array.from(unlockedBadges);
+    return Array.from(finalBadges);
 };
 
 export const purchaseItem = (

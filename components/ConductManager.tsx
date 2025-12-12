@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Student, ConductRecord, Settings, AcademicRank, BehaviorItem } from '../types';
 import { getStudents, getConductRecords, saveConductRecords, getSettings, saveSettings, uploadToCloud, saveStudents } from '../services/dataService';
@@ -51,21 +52,27 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       return generateClassAnalysis(students, records, settings, statsEndWeek);
   }, [students, records, settings, statsEndWeek]);
   
-  // FIX: Accept currentStudents argument to avoid stale closure state issues
-  // This ensures we calculate badges based on the LATEST coin data
   const calculateAllGamification = (currentStudents: Student[] = students) => {
       const updatedStudents = currentStudents.map(student => {
-          const unlocked = checkBadges(student, records, settings);
-          const newBadges = Array.from(new Set([...(student.badges || []), ...unlocked]));
+          // Check badges now returns the FULL authorized list (handling revocations)
+          const finalBadges = checkBadges(student, records, settings);
           
-          if (newBadges.length !== (student.badges || []).length) {
-               return { ...student, badges: newBadges };
+          // Determine if changes occurred
+          const oldBadges = student.badges || [];
+          const hasChanged = finalBadges.length !== oldBadges.length || !finalBadges.every(b => oldBadges.includes(b));
+          
+          if (hasChanged) {
+               // If displayed badges include ones we just lost, clean them up
+               let newDisplayed = student.displayedBadges || [];
+               newDisplayed = newDisplayed.filter(id => finalBadges.includes(id));
+
+               return { ...student, badges: finalBadges, displayedBadges: newDisplayed };
           }
           return student;
       });
       setStudents(updatedStudents);
       saveStudents(updatedStudents);
-      addLog('GAME', 'Đã cập nhật danh hiệu cho toàn lớp.');
+      addLog('GAME', 'Đã cập nhật danh hiệu (bao gồm thu hồi) cho toàn lớp.');
   };
 
   const updateSettings = (partialSettings: any) => {
@@ -183,9 +190,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       const newProcessed = [...(settings.processedWeeks || []), weekKey];
       updateSettings({ processedWeeks: newProcessed });
 
-      // CRITICAL FIX: Pass the 'newStudents' (which has the updated coins) 
-      // directly to the badge calculation logic. 
-      // Do NOT call setStudents(newStudents) separately here, allow calculateAllGamification to do the final save.
+      // Pass the 'newStudents' to badge calc
       calculateAllGamification(newStudents); 
       
       const summaryText = summary.length > 0 ? summary.slice(0, 10).join('\n') + (summary.length > 10 ? `\n... và ${summary.length - 10} người khác.` : '') : 'Không ai nhận được xu.';
@@ -207,7 +212,6 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
 
           const rec = records.find(r => r.studentId === s.id && r.week === selectedWeek);
           const prev = records.find(r => r.studentId === s.id && r.week === selectedWeek - 1);
-          // Re-calculate exactly what would have been given
           const earned = calculateWeeklyCoins(s, rec, prev, settings);
           
           if (earned > 0) {
@@ -220,7 +224,6 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       setStudents(newStudents);
       saveStudents(newStudents);
 
-      // Remove from processed weeks
       const newProcessed = (settings.processedWeeks || []).filter(w => w !== weekKey);
       updateSettings({ processedWeeks: newProcessed });
 
