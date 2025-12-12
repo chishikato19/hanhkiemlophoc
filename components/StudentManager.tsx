@@ -248,9 +248,15 @@ const StudentManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
             <tbody className="divide-y">
                 {students.map(s => (
                     <tr key={s.id} className={`hover:bg-gray-50 ${!s.isActive ? 'bg-gray-100 opacity-60' : ''}`}>
-                        <td className="p-4 font-medium">
-                            {s.name}
-                            {!s.isActive && <span className="ml-2 text-xs bg-gray-500 text-white px-1.5 py-0.5 rounded">Đã khóa</span>}
+                        <td className="p-4 font-medium flex items-center gap-3">
+                            <div className="relative w-8 h-8 flex items-center justify-center">
+                                 {s.frameUrl && <img src={s.frameUrl} className="absolute inset-0 w-full h-full z-10 scale-125" alt="" />}
+                                 <span className="text-2xl leading-none z-0">{s.avatarUrl || '👤'}</span>
+                            </div>
+                            <span>
+                                {s.name}
+                                {!s.isActive && <span className="ml-2 text-xs bg-gray-500 text-white px-1.5 py-0.5 rounded">Đã khóa</span>}
+                            </span>
                         </td>
                         <td className="p-4 text-gray-500">{s.gender}</td>
                         <td className="p-4">
