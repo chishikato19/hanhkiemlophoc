@@ -92,7 +92,7 @@ const InputView: React.FC<Props> = ({
                     <thead className="bg-gray-100 sticky top-0 z-10 shadow-sm text-gray-600 font-semibold">
                         <tr>
                             <th className="p-3 w-10 text-center">#</th>
-                            <th className="p-3 w-40">Học Sinh</th>
+                            <th className="p-3 w-48">Học Sinh</th>
                             <th className="p-3 w-20 text-center">Điểm</th>
                             <th className="p-3 w-24 text-center">Xếp loại</th>
                             <th className="p-3 border-l border-white w-1/4">Lỗi vi phạm</th>
@@ -110,18 +110,21 @@ const InputView: React.FC<Props> = ({
                                 <tr key={s.id} className="hover:bg-indigo-50 transition-colors group">
                                     <td className="p-3 text-gray-400 text-xs text-center">{idx + 1}</td>
                                     <td className="p-3">
-                                        <button onClick={() => setSelectedStudentForDetail(s)} className="font-medium text-gray-800 hover:text-indigo-600 hover:underline text-left flex items-center gap-2">
-                                            <span className="text-xl leading-none">{s.avatarUrl || '👤'}</span>
-                                            {s.name}
+                                        <button onClick={() => setSelectedStudentForDetail(s)} className="font-medium text-gray-800 hover:text-indigo-600 hover:underline text-left flex items-center gap-3">
+                                            <div className="relative w-8 h-8 flex-shrink-0 flex items-center justify-center">
+                                                {s.frameUrl && <img src={s.frameUrl} className="absolute inset-0 w-full h-full z-10 scale-125" alt="" />}
+                                                <span className="text-xl leading-none z-0">{s.avatarUrl || '👤'}</span>
+                                            </div>
+                                            <span>{s.name}</span>
                                         </button>
-                                        <div className="flex gap-1 mt-1 flex-wrap">
+                                        <div className="flex gap-1 mt-1 flex-wrap ml-11">
                                             {/* Coin Badge */}
                                             <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded flex items-center gap-0.5 border border-yellow-200 font-bold" title="Số dư xu">
                                                 <Coins size={10}/> {s.balance || 0}
                                             </span>
-                                            {s.badges?.slice(0, 3).map(bid => {
+                                            {s.badges?.slice(0, 5).map(bid => {
                                                 const badge = settings.gamification.badges.find(b => b.id === bid);
-                                                return badge ? <span key={bid} title={badge.label} className="text-xs">{badge.icon}</span> : null;
+                                                return badge ? <span key={bid} title={badge.label} className="text-sm leading-none">{badge.icon}</span> : null;
                                             })}
                                         </div>
                                     </td>
