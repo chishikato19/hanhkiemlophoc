@@ -11,6 +11,16 @@ const KEY_GAS_URL = 'class_gas_url';
 const KEY_ATTENDANCE = 'class_attendance';
 const KEY_PENDING = 'class_pending_reports';
 
+// --- SVG Frames Data ---
+const FRAME_GOLD = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="gold" stroke-width="5"/><circle cx="50" cy="50" r="45" fill="none" stroke="orange" stroke-width="2" stroke-dasharray="10 5"/></svg>`;
+const FRAME_SILVER = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="silver" stroke-width="5"/><circle cx="50" cy="50" r="45" fill="none" stroke="gray" stroke-width="1" stroke-dasharray="2"/></svg>`;
+const FRAME_WOOD = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="saddlebrown" stroke-width="6"/><circle cx="50" cy="50" r="42" fill="none" stroke="peru" stroke-width="2"/></svg>`;
+const FRAME_FIRE = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="fire" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="red"/><stop offset="100%" stop-color="yellow"/></linearGradient></defs><circle cx="50" cy="50" r="45" fill="none" stroke="url(%23fire)" stroke-width="6" stroke-dasharray="5 2"/></svg>`;
+const FRAME_NATURE = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="forestgreen" stroke-width="5"/><path d="M50 5 Q55 0 60 5" stroke="green" fill="none"/><path d="M20 80 Q15 85 20 90" stroke="green" fill="none"/></svg>`;
+const FRAME_SPACE = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="midnightblue" stroke-width="6"/><circle cx="80" cy="20" r="5" fill="yellow"/><circle cx="20" cy="80" r="3" fill="white"/></svg>`;
+const FRAME_ROYAL = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="purple" stroke-width="6"/><circle cx="50" cy="50" r="45" fill="none" stroke="gold" stroke-width="2" stroke-dasharray="20 10"/></svg>`;
+const FRAME_TECH = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="cyan" stroke-width="4"/><path d="M50 5 L50 15 M95 50 L85 50 M50 95 L50 85 M5 50 L15 50" stroke="cyan" stroke-width="2"/></svg>`;
+
 // Default Settings
 const defaultSettings: Settings = {
   teacherPassword: '123456',
@@ -34,13 +44,13 @@ const defaultSettings: Settings = {
     violations: [
       { id: 'v1', label: 'Nói chuyện riêng', points: -2 },
       { id: 'v2', label: 'Không làm bài tập', points: -5 },
-      { id: 'v3', label: 'Đi muộn', points: -2 }, // Standard name matches AttendanceStatus
+      { id: 'v3', label: 'Đi muộn', points: -2 },
       { id: 'v4', label: 'Không soạn bài', points: -5 },
       { id: 'v5', label: 'Mất trật tự', points: -2 },
       { id: 'v6', label: 'Đồng phục sai quy định', points: -2 },
       { id: 'v7', label: 'Đánh nhau', points: -20 },
       { id: 'v8', label: 'Vô lễ với giáo viên', points: -20 },
-      { id: 'v9', label: 'Vắng không phép', points: -5 } // Added for integration
+      { id: 'v9', label: 'Vắng không phép', points: -5 }
     ],
     positives: [
       { id: 'p1', label: 'Phát biểu xây dựng bài', points: 1 },
@@ -59,7 +69,6 @@ const defaultSettings: Settings = {
       cleanSheet: 30
     },
     badges: [
-      // --- NHÓM KỶ LUẬT & NỀ NẾP (Vui nhộn/Nhắc nhở) ---
       { id: 'style_breaker', label: 'Style Phá Cách', icon: '👕', type: 'count_behavior', threshold: 3, targetBehaviorLabel: 'Đồng phục', description: 'Hay sáng tạo với đồng phục (Cần chỉnh đốn)' },
       { id: 'loud_speaker', label: 'Cái Loa Phường', icon: '📢', type: 'count_behavior', threshold: 3, targetBehaviorLabel: 'Nói chuyện', description: 'Giọng nói vang xa, át tiếng cô giáo' },
       { id: 'late_turtle', label: 'Rùa Tốc Độ', icon: '🐢', type: 'count_behavior', threshold: 3, targetBehaviorLabel: 'Đi muộn', description: 'Luôn đến lớp khi trống đã điểm' },
@@ -68,8 +77,6 @@ const defaultSettings: Settings = {
       { id: 'goldfish', label: 'Não Cá Vàng', icon: '🐟', type: 'count_behavior', threshold: 3, targetBehaviorLabel: 'Không soạn bài', description: 'Hay quên sách vở, đồ dùng học tập' },
       { id: 'sleeping_beauty', label: 'Thánh Ngủ Gật', icon: '😴', type: 'improvement', threshold: 999, description: 'Gán thủ công: Hay mơ màng trong giờ học' },
       { id: 'messy_king', label: 'Vua Xả Rác', icon: '🗑️', type: 'improvement', threshold: 999, description: 'Gán thủ công: Ngăn bàn luôn đầy giấy vụn' },
-
-      // --- NHÓM HỌC TẬP (Tích cực) ---
       { id: 'professor', label: 'Giáo Sư Biết Tuốt', icon: '🎓', type: 'count_behavior', threshold: 10, targetBehaviorLabel: 'Phát biểu', description: 'Cái gì cũng biết, hỏi gì cũng giơ tay' },
       { id: 'speed_god', label: 'Chiến Thần Tốc Độ', icon: '🚀', type: 'count_behavior', threshold: 5, targetBehaviorLabel: 'Làm bài tốt', description: 'Làm bài tập nhanh và chính xác nhất lớp' },
       { id: 'calligraphy', label: 'Vở Sạch Chữ Đẹp', icon: '✍️', type: 'improvement', threshold: 999, description: 'Gán thủ công: Trình bày bài vở như in' },
@@ -77,21 +84,15 @@ const defaultSettings: Settings = {
       { id: 'math_pro', label: 'Thần Đồng Toán Học', icon: '➕', type: 'improvement', threshold: 999, description: 'Gán thủ công: Xuất sắc trong các môn Tự nhiên' },
       { id: 'literature_soul', label: 'Tâm Hồn Thi Sĩ', icon: '📚', type: 'improvement', threshold: 999, description: 'Gán thủ công: Văn hay chữ tốt' },
       { id: 'language_master', label: 'Bậc Thầy Ngoại Ngữ', icon: '🔡', type: 'improvement', threshold: 999, description: 'Gán thủ công: Phát âm chuẩn, từ vựng rộng' },
-
-      // --- NHÓM LAO ĐỘNG & XÃ HỘI ---
       { id: 'clean_hero', label: 'Dũng Sĩ Diệt Khuẩn', icon: '🧹', type: 'count_behavior', threshold: 3, targetBehaviorLabel: 'trực nhật', description: 'Lớp học sạch bong kin kít nhờ bàn tay này' },
       { id: 'friendly_ambassador', label: 'Đại Sứ Thân Thiện', icon: '🤝', type: 'count_behavior', threshold: 5, targetBehaviorLabel: 'Giúp đỡ', description: 'Luôn sẵn sàng giúp đỡ mọi người' },
       { id: 'peacemaker', label: 'Người Bảo Vệ', icon: '🛡️', type: 'improvement', threshold: 999, description: 'Gán thủ công: Hay bênh vực kẻ yếu, can ngăn xích mích' },
       { id: 'comedian', label: 'Cây Hài Nhân Dân', icon: '🤡', type: 'improvement', threshold: 999, description: 'Gán thủ công: Mang lại tiếng cười cho cả lớp' },
       { id: 'nature_lover', label: 'Người Chăm Sóc', icon: '🌻', type: 'improvement', threshold: 999, description: 'Gán thủ công: Chăm sóc cây cối, góc thiên nhiên' },
-
-      // --- CHUỖI & THÀNH TÍCH CAO (Streak) ---
       { id: 'fire_warrior', label: 'Chiến Binh Bất Bại', icon: '🔥', type: 'streak_good', threshold: 4, description: '4 tuần liên tiếp đạt Hạnh kiểm Tốt' },
       { id: 'angel_aura', label: 'Thiên Thần Áo Trắng', icon: '😇', type: 'no_violation_streak', threshold: 8, description: '8 tuần liên tiếp không vi phạm nội quy' },
       { id: 'rising_star', label: 'Mầm Non Triển Vọng', icon: '🌱', type: 'improvement', threshold: 1, description: 'Có sự tiến bộ vượt bậc so với tuần trước' },
       { id: 'silent_star', label: 'Sao Im Lặng', icon: '🤫', type: 'no_violation_streak', threshold: 2, description: 'Giữ trật tự rất tốt trong 2 tuần liền' },
-
-      // --- VAI TRÒ & NĂNG KHIẾU (Thủ công) ---
       { id: 'justice_bao', label: 'Bao Công Nhí', icon: '⚖️', type: 'improvement', threshold: 999, description: 'Gán thủ công: Cán bộ lớp gương mẫu, công tâm' },
       { id: 'camera_man', label: 'Tai Mắt Của Lớp', icon: '📹', type: 'improvement', threshold: 999, description: 'Gán thủ công: Nắm bắt tình hình lớp siêu nhanh' },
       { id: 'sport_master', label: 'Kiện Tướng Thể Thao', icon: '⚽', type: 'improvement', threshold: 999, description: 'Gán thủ công: Giỏi các hoạt động vận động' },
@@ -107,7 +108,6 @@ const defaultSettings: Settings = {
       { id: 'r5', label: 'DJ của lớp', cost: 150, description: 'Được chọn nhạc giờ ra chơi', stock: -1 }
     ],
     avatars: [
-        // --- CŨ (Giữ lại) ---
         { id: 'av1', label: 'Hổ Mạnh Mẽ', url: '🐯', cost: 100 },
         { id: 'av2', label: 'Mèo May Mắn', url: '😺', cost: 100 },
         { id: 'av3', label: 'Cún Đáng Yêu', url: '🐶', cost: 100 },
@@ -122,8 +122,6 @@ const defaultSettings: Settings = {
         { id: 'av19', label: 'Ngầu Lòi', url: '😎', cost: 100 },
         { id: 'av21', label: 'Mặt Hề', url: '🤡', cost: 100 },
         { id: 'av22', label: 'Yêu Đời', url: '🥰', cost: 100 },
-
-        // --- NGHỀ NGHIỆP NỮ (Mới) ---
         { id: 'av_f_1', label: 'Bác Sĩ', url: '👩‍⚕️', cost: 300 },
         { id: 'av_f_2', label: 'Cô Giáo', url: '👩‍🏫', cost: 250 },
         { id: 'av_f_3', label: 'Họa Sĩ', url: '👩‍🎨', cost: 250 },
@@ -139,8 +137,6 @@ const defaultSettings: Settings = {
         { id: 'av_f_13', label: 'Nhà Khoa Học', url: '👩‍🔬', cost: 300 },
         { id: 'av_f_14', label: 'Phi Công', url: '👩‍✈️', cost: 300 },
         { id: 'av_f_15', label: 'Doanh Nhân', url: '👩‍💼', cost: 300 },
-
-        // --- NHÂN VẬT CỔ TÍCH / FANTASY NỮ (Mới) ---
         { id: 'av_f_16', label: 'Tiên Nữ', url: '🧚‍♀️', cost: 400 },
         { id: 'av_f_17', label: 'Nàng Tiên Cá', url: '🧜‍♀️', cost: 400 },
         { id: 'av_f_18', label: 'Phù Thủy', url: '🧙‍♀️', cost: 350 },
@@ -151,8 +147,6 @@ const defaultSettings: Settings = {
         { id: 'av_f_23', label: 'Yêu Tinh', url: '🧝‍♀️', cost: 350 },
         { id: 'av_f_24', label: 'Siêu Anh Hùng', url: '🦸‍♀️', cost: 350 },
         { id: 'av_f_25', label: 'Cô Dâu', url: '👰', cost: 400 },
-
-        // --- HOẠT ĐỘNG & PHONG CÁCH (Mới) ---
         { id: 'av_f_26', label: 'Vũ Công', url: '💃', cost: 250 },
         { id: 'av_f_27', label: 'Yoga', url: '🧘‍♀️', cost: 200 },
         { id: 'av_f_28', label: 'Thể Dục', url: '🤸‍♀️', cost: 200 },
@@ -162,16 +156,12 @@ const defaultSettings: Settings = {
         { id: 'av_f_32', label: 'Cắt Tóc', url: '💇‍♀️', cost: 150 },
         { id: 'av_f_33', label: 'Thư Giãn', url: '💆‍♀️', cost: 150 },
         { id: 'av_f_34', label: 'Mua Sắm', url: '🛍️', cost: 200 },
-
-        // --- DỄ THƯƠNG (Mới) ---
         { id: 'av_f_35', label: 'Thỏ Con', url: '🐰', cost: 150 },
         { id: 'av_f_36', label: 'Mèo Con', url: '😺', cost: 150 },
         { id: 'av_f_38', label: 'Bướm Xinh', url: '🦋', cost: 150 },
         { id: 'av_f_40', label: 'Cánh Cụt', url: '🐧', cost: 150 },
         { id: 'av_f_41', label: 'Hồng Hạc', url: '🦩', cost: 200 },
         { id: 'av_f_42', label: 'Cá Heo', url: '🐬', cost: 200 },
-
-        // --- CON NGƯỜI (Mới) ---
         { id: 'av_f_43', label: 'Bạn Gái', url: '👧', cost: 100 },
         { id: 'av_f_44', label: 'Phụ Nữ', url: '👩', cost: 100 },
         { id: 'av_f_45', label: 'Tóc Vàng', url: '👱‍♀️', cost: 120 },
@@ -180,6 +170,16 @@ const defaultSettings: Settings = {
         { id: 'av_f_48', label: 'Bà Hiền', url: '👵', cost: 100 },
         { id: 'av_f_49', label: 'Che Mặt', url: '🙈', cost: 150 },
         { id: 'av_f_50', label: 'Mẹ Bầu', url: '🤰', cost: 150 }
+    ],
+    frames: [
+        { id: 'frame_wood', label: 'Khung Gỗ', image: FRAME_WOOD, cost: 50 },
+        { id: 'frame_silver', label: 'Khung Bạc', image: FRAME_SILVER, cost: 200 },
+        { id: 'frame_gold', label: 'Khung Vàng', image: FRAME_GOLD, cost: 500 },
+        { id: 'frame_fire', label: 'Hỏa Thần', image: FRAME_FIRE, cost: 1000 },
+        { id: 'frame_nature', label: 'Thiên Nhiên', image: FRAME_NATURE, cost: 300 },
+        { id: 'frame_space', label: 'Vũ Trụ', image: FRAME_SPACE, cost: 800 },
+        { id: 'frame_royal', label: 'Hoàng Gia', image: FRAME_ROYAL, cost: 1200 },
+        { id: 'frame_tech', label: 'Công Nghệ', image: FRAME_TECH, cost: 600 }
     ]
   },
   lockedWeeks: [],
@@ -199,7 +199,9 @@ export const seedData = () => {
     badges: i < 5 ? ['fire_warrior'] : [], // Top 5 students have a badge
     inventory: [],
     avatarUrl: undefined,
-    ownedAvatars: []
+    ownedAvatars: [],
+    frameUrl: undefined,
+    ownedFrames: []
   }));
 
   const conduct: ConductRecord[] = [];
@@ -273,7 +275,9 @@ export const getStudents = (): Student[] => {
     badges: s.badges || [],
     inventory: s.inventory || [],
     avatarUrl: s.avatarUrl || undefined,
-    ownedAvatars: s.ownedAvatars || []
+    ownedAvatars: s.ownedAvatars || [],
+    frameUrl: s.frameUrl || undefined,
+    ownedFrames: s.ownedFrames || []
   }));
 };
 
@@ -318,18 +322,14 @@ export const getSettings = (): Settings => {
     const parsed = JSON.parse(stored);
 
     // Helper to merge lists (Defaults + Saved)
-    // This ensures that if we update the default list (e.g. add new badges/avatars), 
-    // old save files get them too, while preserving user customizations if IDs match.
     const mergeLists = (defaults: any[], saved: any[]) => {
         const merged = [...defaults];
         const defaultIds = new Set(defaults.map(i => i.id));
         saved.forEach(item => {
             if (defaultIds.has(item.id)) {
-                // Keep the saved item (user might have customized cost/points)
                 const idx = merged.findIndex(i => i.id === item.id);
                 if (idx > -1) merged[idx] = item;
             } else {
-                // Add custom user items that don't exist in defaults
                 merged.push(item);
             }
         });
@@ -339,6 +339,7 @@ export const getSettings = (): Settings => {
     const mergedBadges = mergeLists(defaultSettings.gamification.badges, parsed.gamification?.badges || []);
     const mergedAvatars = mergeLists(defaultSettings.gamification.avatars, parsed.gamification?.avatars || []);
     const mergedRewards = mergeLists(defaultSettings.gamification.rewards, parsed.gamification?.rewards || []);
+    const mergedFrames = mergeLists(defaultSettings.gamification.frames, parsed.gamification?.frames || []);
 
     return { 
         ...defaultSettings, 
@@ -356,6 +357,7 @@ export const getSettings = (): Settings => {
           badges: mergedBadges,
           rewards: mergedRewards,
           avatars: mergedAvatars,
+          frames: mergedFrames,
           coinRules: { ...defaultSettings.gamification.coinRules, ...(parsed.gamification?.coinRules || {}) }
         },
         lockedWeeks: parsed.lockedWeeks || [],
@@ -409,7 +411,7 @@ export const exportFullData = () => {
     settings: getSettings(),
     gasUrl: getGasUrl(),
     exportDate: new Date().toISOString(),
-    version: '2.4'
+    version: '2.5' // Bump version
   };
   return JSON.stringify(data, null, 2);
 };
