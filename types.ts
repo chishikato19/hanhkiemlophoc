@@ -28,6 +28,8 @@ export interface Student {
   inventory?: InventoryItem[]; // Items purchased
   avatarUrl?: string; // Current avatar URL
   ownedAvatars?: string[]; // List of Avatar IDs owned
+  frameUrl?: string; // Current frame ID/Class
+  ownedFrames?: string[]; // List of Frame IDs owned
 }
 
 export interface ConductRecord {
@@ -101,6 +103,13 @@ export interface AvatarItem {
   cost: number;
 }
 
+export interface FrameItem {
+    id: string;
+    label: string;
+    image: string; // SVG Data URI or Image URL
+    cost: number;
+}
+
 export interface Settings {
   teacherPassword?: string;
   studentCode?: string;
@@ -133,6 +142,7 @@ export interface Settings {
     badges: BadgeConfig[];
     rewards: RewardItem[];
     avatars: AvatarItem[]; // New: Avatars list
+    frames: FrameItem[]; // New: Frames list
     coinRules: {
       weeklyGood: number; // Coins for Good rank
       behaviorBonus: number; // Coins per positive behavior
