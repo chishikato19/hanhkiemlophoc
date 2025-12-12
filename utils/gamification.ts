@@ -1,9 +1,8 @@
 
-import { Student, ConductRecord, Settings, BadgeConfig, RewardItem, AvatarItem } from '../types';
+import { Student, ConductRecord, Settings, BadgeConfig, RewardItem, AvatarItem, FrameItem } from '../types';
 
 /**
  * Calculate potential coins for a specific week based on rules.
- * This is meant to be run when "finalizing" a week or previewing.
  */
 export const calculateWeeklyCoins = (
     student: Student,
@@ -22,7 +21,6 @@ export const calculateWeeklyCoins = (
     }
 
     // 2. Positive Behaviors
-    // Each behavior counts once? Or total items? Usually each item.
     if (record.positiveBehaviors) {
         coins += record.positiveBehaviors.length * rules.behaviorBonus;
     }
@@ -42,7 +40,6 @@ export const calculateWeeklyCoins = (
 
 /**
  * Analyze student history to find new unlocked badges.
- * Returns a list of Badge IDs that the student has earned but doesn't have yet (or all earned).
  */
 export const checkBadges = (
     student: Student,
@@ -84,12 +81,10 @@ export const checkBadges = (
 
         if (badge.type === 'count_behavior' && badge.targetBehaviorLabel) {
             let count = 0;
-            // Need to match loosely (e.g. "Speaking (+1)" matches "Speaking")
             const target = badge.targetBehaviorLabel.toLowerCase();
             studentRecords.forEach(r => {
                 if (r.positiveBehaviors) {
                     r.positiveBehaviors.forEach(p => {
-                        // Strip points for comparison
                         const cleanP = p.replace(/\([+-]?\d+đ\)/, '').trim().toLowerCase();
                         if (cleanP.includes(target)) count++;
                     });
@@ -106,9 +101,6 @@ export const checkBadges = (
     return Array.from(unlockedBadges);
 };
 
-/**
- * Handle purchasing an item. Returns the updated Student object if successful, or null if failed.
- */
 export const purchaseItem = (
     student: Student,
     item: RewardItem
@@ -116,11 +108,8 @@ export const purchaseItem = (
     const currentBalance = student.balance || 0;
     if (currentBalance >= item.cost) {
         const newBalance = currentBalance - item.cost;
-        
-        // Add to inventory
         const inventory = student.inventory || [];
         const existingItemIndex = inventory.findIndex(i => i.itemId === item.id);
-        
         let newInventory = [...inventory];
         if (existingItemIndex > -1) {
             newInventory[existingItemIndex] = { 
@@ -130,19 +119,15 @@ export const purchaseItem = (
         } else {
             newInventory.push({ itemId: item.id, count: 1 });
         }
-
         return { 
             ...student, 
             balance: newBalance,
             inventory: newInventory
         };
     }
-    return null; // Not enough funds
+    return null;
 };
 
-/**
- * Handle using an item from inventory. Returns updated Student or null if not found.
- */
 export const useItem = (
     student: Student,
     itemId: string
@@ -167,41 +152,60 @@ export const useItem = (
     };
 };
 
-/**
- * Handle purchasing an Avatar.
- * Adds to ownedAvatars and auto-equips it.
- */
 export const purchaseAvatar = (
     student: Student,
     avatar: AvatarItem
 ): Student | null => {
     const currentBalance = student.balance || 0;
-    // Check if already owned
     if ((student.ownedAvatars || []).includes(avatar.id)) {
-        // Just equip it
         return { ...student, avatarUrl: avatar.url };
     }
-
     if (currentBalance >= avatar.cost) {
         const newBalance = currentBalance - avatar.cost;
         const newOwned = [...(student.ownedAvatars || []), avatar.id];
-
         return {
             ...student,
             balance: newBalance,
             ownedAvatars: newOwned,
-            avatarUrl: avatar.url // Auto equip on buy
+            avatarUrl: avatar.url
         };
     }
     return null;
 }
 
-/**
- * Equip an owned avatar
- */
 export const equipAvatar = (
     student: Student,
     avatar: AvatarItem
 ): Student => {
     return { ...student, avatarUrl: avatar.url };
+}
+
+// --- Frame Logic ---
+
+export const purchaseFrame = (
+    student: Student,
+    frame: FrameItem
+): Student | null => {
+    const currentBalance = student.balance || 0;
+    if ((student.ownedFrames || []).includes(frame.id)) {
+        return { ...student, frameUrl: frame.image };
+    }
+    if (currentBalance >= frame.cost) {
+        const newBalance = currentBalance - frame.cost;
+        const newOwned = [...(student.ownedFrames || []), frame.id];
+        return {
+            ...student,
+            balance: newBalance,
+            ownedFrames: newOwned,
+            frameUrl: frame.image
+        };
+    }
+    return null;
+}
+
+export const equipFrame = (
+    student: Student,
+    frame: FrameItem
+): Student => {
+    return { ...student, frameUrl: frame.image };
 }
