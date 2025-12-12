@@ -20,6 +20,12 @@ const FRAME_NATURE = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000
 const FRAME_SPACE = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="midnightblue" stroke-width="6"/><circle cx="80" cy="20" r="5" fill="yellow"/><circle cx="20" cy="80" r="3" fill="white"/></svg>`;
 const FRAME_ROYAL = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="purple" stroke-width="6"/><circle cx="50" cy="50" r="45" fill="none" stroke="gold" stroke-width="2" stroke-dasharray="20 10"/></svg>`;
 const FRAME_TECH = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="cyan" stroke-width="4"/><path d="M50 5 L50 15 M95 50 L85 50 M50 95 L50 85 M5 50 L15 50" stroke="cyan" stroke-width="2"/></svg>`;
+const FRAME_NEON = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><filter id="glow"><feGaussianBlur stdDeviation="2.5" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><circle cx="50" cy="50" r="45" fill="none" stroke="%23ff00ff" stroke-width="4" filter="url(%23glow)"/><circle cx="50" cy="50" r="40" fill="none" stroke="%2300ffff" stroke-width="2"/></svg>`;
+const FRAME_FLOWER = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="pink" stroke-width="5"/><circle cx="50" cy="5" r="5" fill="hotpink"/><circle cx="95" cy="50" r="5" fill="hotpink"/><circle cx="50" cy="95" r="5" fill="hotpink"/><circle cx="5" cy="50" r="5" fill="hotpink"/><circle cx="18" cy="18" r="5" fill="purple"/><circle cx="82" cy="18" r="5" fill="purple"/><circle cx="82" cy="82" r="5" fill="purple"/><circle cx="18" cy="82" r="5" fill="purple"/></svg>`;
+const FRAME_ICE = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="ice" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="white"/><stop offset="100%" stop-color="deepskyblue"/></linearGradient></defs><circle cx="50" cy="50" r="45" fill="none" stroke="url(%23ice)" stroke-width="6"/><path d="M50 0 L55 10 M95 45 L85 50" stroke="white" stroke-width="2"/></svg>`;
+const FRAME_PIXEL = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="0" width="80" height="10" fill="lime"/><rect x="10" y="90" width="80" height="10" fill="lime"/><rect x="0" y="10" width="10" height="80" fill="lime"/><rect x="90" y="10" width="10" height="80" fill="lime"/><rect x="10" y="10" width="10" height="10" fill="green"/><rect x="80" y="10" width="10" height="10" fill="green"/><rect x="10" y="80" width="10" height="10" fill="green"/><rect x="80" y="80" width="10" height="10" fill="green"/></svg>`;
+const FRAME_DARK = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="black" stroke-width="8"/><circle cx="50" cy="50" r="46" fill="none" stroke="red" stroke-width="2" stroke-dasharray="20 5"/></svg>`;
+const FRAME_RAINBOW = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="rainbow" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="red"/><stop offset="20%" stop-color="orange"/><stop offset="40%" stop-color="yellow"/><stop offset="60%" stop-color="green"/><stop offset="80%" stop-color="blue"/><stop offset="100%" stop-color="violet"/></linearGradient></defs><circle cx="50" cy="50" r="45" fill="none" stroke="url(%23rainbow)" stroke-width="6"/></svg>`;
 
 // Default Settings
 const defaultSettings: Settings = {
@@ -179,7 +185,13 @@ const defaultSettings: Settings = {
         { id: 'frame_nature', label: 'Thiên Nhiên', image: FRAME_NATURE, cost: 300 },
         { id: 'frame_space', label: 'Vũ Trụ', image: FRAME_SPACE, cost: 800 },
         { id: 'frame_royal', label: 'Hoàng Gia', image: FRAME_ROYAL, cost: 1200 },
-        { id: 'frame_tech', label: 'Công Nghệ', image: FRAME_TECH, cost: 600 }
+        { id: 'frame_tech', label: 'Công Nghệ', image: FRAME_TECH, cost: 600 },
+        { id: 'frame_neon', label: 'Neon Cyber', image: FRAME_NEON, cost: 700 },
+        { id: 'frame_flower', label: 'Hoa Xuân', image: FRAME_FLOWER, cost: 250 },
+        { id: 'frame_ice', label: 'Băng Giá', image: FRAME_ICE, cost: 450 },
+        { id: 'frame_pixel', label: 'Pixel Art', image: FRAME_PIXEL, cost: 350 },
+        { id: 'frame_dark', label: 'Bóng Đêm', image: FRAME_DARK, cost: 666 },
+        { id: 'frame_rainbow', label: 'Cầu Vồng', image: FRAME_RAINBOW, cost: 888 }
     ]
   },
   lockedWeeks: [],
