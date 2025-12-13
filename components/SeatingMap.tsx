@@ -1,10 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Student, Seat, ROWS, COLS, AcademicRank } from '../types';
-import { getStudents, getSeatingMap, saveSeatingMap, getSettings } from '../services/dataService';
+import { getStudents, getSeatingMap, saveSeatingMap, getSettings, uploadToCloud } from '../services/dataService';
 import { autoArrangeSeating } from '../utils/seatingLogic';
-import { Printer, Shuffle, Save, Info, RotateCcw } from 'lucide-react';
+import { Printer, Shuffle, Save, Info, RotateCcw, Crown, ImageIcon, CloudUpload, Loader } from 'lucide-react';
 import { addLog } from '../utils/logger';
+
+// Declare html2canvas globally as it's loaded via CDN
+declare const html2canvas: any;
 
 interface Props {
     setHasUnsavedChanges: (val: boolean) => void;
@@ -14,6 +17,8 @@ const SeatingMap: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [seats, setSeats] = useState<Seat[]>([]);
   const [draggedSeat, setDraggedSeat] = useState<Seat | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const mapRef = useRef<HTMLDivElement>(null);
   const settings = getSettings();
 
   useEffect(() => {
@@ -72,10 +77,41 @@ const SeatingMap: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       }
   };
 
-  const saveLayout = () => {
+  const saveLayoutLocal = () => {
       saveSeatingMap(seats);
-      setHasUnsavedChanges(true);
-      alert('Đã lưu sơ đồ!');
+      setHasUnsavedChanges(false); // Mark as saved
+      alert('Đã lưu sơ đồ vào máy!');
+  };
+
+  const handleCloudSave = async () => {
+      setIsSaving(true);
+      // 1. Save locally first to ensure dataService picks up the latest state
+      saveSeatingMap(seats);
+      setHasUnsavedChanges(false);
+
+      // 2. Upload to Google Sheet
+      const success = await uploadToCloud();
+      setIsSaving(false);
+      
+      if (success) {
+          alert('Đã đồng bộ sơ đồ lên Google Sheet thành công!');
+      } else {
+          alert('Lỗi khi lưu lên Cloud. Vui lòng kiểm tra kết nối.');
+      }
+  };
+
+  const handleDownloadImage = async () => {
+      if (!mapRef.current) return;
+      try {
+          const canvas = await html2canvas(mapRef.current, { scale: 2, useCORS: true });
+          const link = document.createElement('a');
+          link.download = `SoDoLopHoc_${new Date().toISOString().split('T')[0]}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+      } catch (e) {
+          console.error(e);
+          alert("Lỗi khi tạo ảnh. Vui lòng thử lại.");
+      }
   };
 
   const handlePrint = () => {
@@ -185,7 +221,14 @@ const SeatingMap: React.FC<Props> = ({ setHasUnsavedChanges }) => {
         >
             {student ? (
                 <>
-                    <div className="font-bold text-sm leading-tight line-clamp-2 break-words w-full mb-1">
+                    {/* VIP CROWN INDICATOR */}
+                    {student.hasPrioritySeating && (
+                        <div className="absolute -top-2 -right-2 text-yellow-500 z-20 drop-shadow-sm bg-white rounded-full p-0.5" title="Vé Chọn Chỗ VIP">
+                            <Crown size={16} fill="gold" />
+                        </div>
+                    )}
+
+                    <div className="font-bold text-sm leading-tight line-clamp-2 break-words w-full mb-1 relative z-10">
                         {student.name}
                     </div>
                     {/* Avatar with Frame */}
@@ -214,29 +257,43 @@ const SeatingMap: React.FC<Props> = ({ setHasUnsavedChanges }) => {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6 no-print gap-4">
+      <div className="flex flex-col xl:flex-row justify-between items-center mb-6 no-print gap-4">
         <div>
              <h2 className="text-2xl font-bold text-gray-800">Sơ Đồ Lớp Học</h2>
-             <p className="text-sm text-gray-500">Kéo thả để đổi chỗ. Dữ liệu tự động lưu khi di chuyển.</p>
+             <p className="text-sm text-gray-500">Kéo thả để đổi chỗ. Dữ liệu tự động lưu vào máy khi di chuyển.</p>
         </div>
         <div className="flex flex-wrap gap-2 justify-center">
-            <button onClick={handleReset} className="flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded hover:bg-red-200">
-                <RotateCcw size={18} /> Reset
+            <button onClick={handleReset} className="flex items-center gap-1 bg-red-100 text-red-700 px-3 py-2 rounded hover:bg-red-200 text-sm font-medium">
+                <RotateCcw size={16} /> Reset
             </button>
-            <button onClick={handleAutoArrange} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded shadow hover:bg-indigo-700">
-                <Shuffle size={18} /> <span className="hidden sm:inline">Tự động xếp</span>
+            <button onClick={handleAutoArrange} className="flex items-center gap-1 bg-indigo-100 text-indigo-700 px-3 py-2 rounded hover:bg-indigo-200 text-sm font-medium">
+                <Shuffle size={16} /> Tự động
             </button>
-            <button onClick={saveLayout} className="flex items-center gap-2 bg-white text-gray-700 border px-4 py-2 rounded hover:bg-gray-100">
-                <Save size={18} /> Lưu
+            
+            <div className="w-px h-8 bg-gray-300 mx-1 hidden sm:block"></div>
+
+            <button onClick={handleDownloadImage} className="flex items-center gap-1 bg-white text-gray-700 border px-3 py-2 rounded hover:bg-gray-50 text-sm font-medium">
+                <ImageIcon size={16} /> Xuất ảnh
             </button>
-             <button onClick={handlePrint} className="flex items-center gap-2 bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-900">
-                <Printer size={18} /> In
+             <button onClick={handlePrint} className="flex items-center gap-1 bg-gray-700 text-white px-3 py-2 rounded hover:bg-gray-800 text-sm font-medium">
+                <Printer size={16} /> In
+            </button>
+
+            <div className="w-px h-8 bg-gray-300 mx-1 hidden sm:block"></div>
+
+            <button onClick={saveLayoutLocal} className="flex items-center gap-1 bg-white border border-green-500 text-green-700 px-3 py-2 rounded hover:bg-green-50 text-sm font-medium">
+                <Save size={16} /> Lưu máy
+            </button>
+            
+            <button onClick={handleCloudSave} disabled={isSaving} className="flex items-center gap-1 bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 text-sm font-bold">
+                {isSaving ? <Loader size={16} className="animate-spin"/> : <CloudUpload size={16} />} 
+                Lưu Google Sheet
             </button>
         </div>
       </div>
 
       {/* Classroom Container */}
-      <div className="bg-white p-4 sm:p-8 rounded-xl shadow-lg border-t-8 border-indigo-600 overflow-x-auto print-only">
+      <div ref={mapRef} className="bg-white p-4 sm:p-8 rounded-xl shadow-lg border-t-8 border-indigo-600 overflow-x-auto print-only">
          <div className="text-center mb-8 border-b-2 border-dashed border-gray-300 pb-4">
             <div className="inline-block px-8 py-2 bg-gray-800 text-white font-bold rounded-lg uppercase tracking-widest text-sm">Bảng Giáo Viên</div>
          </div>
@@ -270,8 +327,8 @@ const SeatingMap: React.FC<Props> = ({ setHasUnsavedChanges }) => {
             <strong>Ghi chú xếp chỗ:</strong>
             <ul className="list-disc ml-4 mt-1 space-y-1">
                 <li>Học sinh có Khung hình và Avatar sẽ hiển thị trực tiếp.</li>
+                <li><Crown size={12} className="inline text-yellow-600"/> : Học sinh đã dùng <strong>Vé Chọn Chỗ VIP</strong>.</li>
                 <li><span className="text-red-500 font-bold">⚠</span> : Học sinh hay nói chuyện.</li>
-                <li>Biểu tượng danh hiệu hiển thị dựa trên những gì bạn đã "Ghim" trong Cửa hàng (hoặc 5 cái đầu tiên).</li>
             </ul>
          </div>
       </div>
