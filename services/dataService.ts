@@ -11,54 +11,9 @@ const KEY_GAS_URL = 'class_gas_url';
 const KEY_ATTENDANCE = 'class_attendance';
 const KEY_PENDING = 'class_pending_reports';
 const KEY_ORDERS = 'class_pending_orders';
-const KEY_FUNDS = 'class_funds';
+const KEY_FUNDS = 'class_funds'; // NEW
 
-// --- SECURITY & OBFUSCATION ---
-// Simple obfuscation to prevent casual F12 snooping. 
-// For military-grade security, logic must move to a real backend, 
-// but this stops 99% of students.
-const SALT = "L0p_H0c_Th0ng_M1nh_2024";
-
-const encryptData = (data: any): string => {
-    try {
-        const json = JSON.stringify(data);
-        // Base64 Encode + URI Component to handle UTF-8 correctly
-        return 'SEC:' + btoa(encodeURIComponent(json).replace(/%([0-9A-F]{2})/g,
-            function toSolidBytes(match, p1) {
-                return String.fromCharCode(parseInt(p1, 16));
-        }));
-    } catch (e) {
-        console.error("Encrypt error", e);
-        return "";
-    }
-};
-
-const decryptData = (ciphertext: string | null): any => {
-    if (!ciphertext) return null;
-    
-    // Migration: If data is plain JSON (old format), return it directly
-    if (!ciphertext.startsWith('SEC:')) {
-        try {
-            return JSON.parse(ciphertext);
-        } catch (e) {
-            return null;
-        }
-    }
-
-    // Decrypt
-    try {
-        const raw = ciphertext.substring(4); // Remove 'SEC:' prefix
-        const json = decodeURIComponent(atob(raw).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        return JSON.parse(json);
-    } catch (e) {
-        console.error("Decrypt error", e);
-        return null;
-    }
-};
-
-// --- SVG Frames Data (Giữ nguyên) ---
+// --- SVG Frames Data ---
 const FRAME_GOLD = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="gold" stroke-width="5"/><circle cx="50" cy="50" r="45" fill="none" stroke="orange" stroke-width="2" stroke-dasharray="10 5"/></svg>`;
 const FRAME_SILVER = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="silver" stroke-width="5"/><circle cx="50" cy="50" r="45" fill="none" stroke="gray" stroke-width="1" stroke-dasharray="2"/></svg>`;
 const FRAME_WOOD = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="saddlebrown" stroke-width="6"/><circle cx="50" cy="50" r="42" fill="none" stroke="peru" stroke-width="2"/></svg>`;
@@ -208,13 +163,12 @@ export const seedData = () => {
       { id: 'FT-2', date: new Date().toISOString(), type: 'OUT', amount: 100000, category: 'Photo', description: 'Photo tài liệu tuần 1' }
   ];
   
-  // Use Obfuscated Save
-  localStorage.setItem(KEY_STUDENTS, encryptData(students));
-  localStorage.setItem(KEY_CONDUCT, encryptData(conduct));
-  localStorage.setItem(KEY_SETTINGS, encryptData(defaultSettings));
-  localStorage.setItem(KEY_ATTENDANCE, encryptData(attendance));
-  localStorage.setItem(KEY_PENDING, encryptData(pending));
-  localStorage.setItem(KEY_FUNDS, encryptData(funds));
+  localStorage.setItem(KEY_STUDENTS, JSON.stringify(students));
+  localStorage.setItem(KEY_CONDUCT, JSON.stringify(conduct));
+  localStorage.setItem(KEY_SETTINGS, JSON.stringify(defaultSettings));
+  localStorage.setItem(KEY_ATTENDANCE, JSON.stringify(attendance));
+  localStorage.setItem(KEY_PENDING, JSON.stringify(pending));
+  localStorage.setItem(KEY_FUNDS, JSON.stringify(funds));
   localStorage.removeItem(KEY_ORDERS);
   
   addLog('SYSTEM', 'Đã khởi tạo dữ liệu mẫu thành công.');
@@ -223,13 +177,13 @@ export const seedData = () => {
 
 // --- Students ---
 export const getStudents = (): Student[] => {
-  const raw = decryptData(localStorage.getItem(KEY_STUDENTS)) || [];
+  const raw = JSON.parse(localStorage.getItem(KEY_STUDENTS) || '[]');
   return raw.map((s: any) => ({ 
     ...s, 
     isActive: s.isActive !== undefined ? s.isActive : true,
     balance: s.balance !== undefined ? s.balance : 0,
     roles: s.roles || [],
-    password: s.password || '123',
+    password: s.password || '123', // Ensure password exists
     badges: s.badges || [],
     inventory: s.inventory || [],
     avatarUrl: s.avatarUrl || undefined,
@@ -241,63 +195,62 @@ export const getStudents = (): Student[] => {
 };
 
 export const saveStudents = (students: Student[]) => {
-  localStorage.setItem(KEY_STUDENTS, encryptData(students));
+  localStorage.setItem(KEY_STUDENTS, JSON.stringify(students));
   addLog('DATA', `Đã lưu danh sách ${students.length} học sinh.`);
 };
 
 // --- Conduct ---
 export const getConductRecords = (): ConductRecord[] => {
-  return decryptData(localStorage.getItem(KEY_CONDUCT)) || [];
+  return JSON.parse(localStorage.getItem(KEY_CONDUCT) || '[]');
 };
 
 export const saveConductRecords = (records: ConductRecord[]) => {
-  localStorage.setItem(KEY_CONDUCT, encryptData(records));
+  localStorage.setItem(KEY_CONDUCT, JSON.stringify(records));
   addLog('DATA', `Đã cập nhật dữ liệu hạnh kiểm.`);
 };
 
 // --- Attendance ---
 export const getAttendance = (): AttendanceRecord[] => {
-    return decryptData(localStorage.getItem(KEY_ATTENDANCE)) || [];
+    return JSON.parse(localStorage.getItem(KEY_ATTENDANCE) || '[]');
 };
 
 export const saveAttendance = (records: AttendanceRecord[]) => {
-    localStorage.setItem(KEY_ATTENDANCE, encryptData(records));
+    localStorage.setItem(KEY_ATTENDANCE, JSON.stringify(records));
     addLog('DATA', 'Đã cập nhật dữ liệu điểm danh.');
 };
 
 // --- Pending Reports (Inbox) ---
 export const getPendingReports = (): PendingReport[] => {
-    return decryptData(localStorage.getItem(KEY_PENDING)) || [];
+    return JSON.parse(localStorage.getItem(KEY_PENDING) || '[]');
 };
 
 export const savePendingReports = (reports: PendingReport[]) => {
-    localStorage.setItem(KEY_PENDING, encryptData(reports));
+    localStorage.setItem(KEY_PENDING, JSON.stringify(reports));
 };
 
 // --- Pending Orders (Store) ---
 export const getPendingOrders = (): PendingOrder[] => {
-    return decryptData(localStorage.getItem(KEY_ORDERS)) || [];
+    return JSON.parse(localStorage.getItem(KEY_ORDERS) || '[]');
 }
 
 export const savePendingOrders = (orders: PendingOrder[]) => {
-    localStorage.setItem(KEY_ORDERS, encryptData(orders));
+    localStorage.setItem(KEY_ORDERS, JSON.stringify(orders));
 }
 
 // --- Fund Transactions (NEW) ---
 export const getFundTransactions = (): FundTransaction[] => {
-    return decryptData(localStorage.getItem(KEY_FUNDS)) || [];
+    return JSON.parse(localStorage.getItem(KEY_FUNDS) || '[]');
 }
 
 export const saveFundTransactions = (transactions: FundTransaction[]) => {
-    localStorage.setItem(KEY_FUNDS, encryptData(transactions));
+    localStorage.setItem(KEY_FUNDS, JSON.stringify(transactions));
 }
 
 // --- Settings ---
 export const getSettings = (): Settings => {
   const stored = localStorage.getItem(KEY_SETTINGS);
-  
   if (stored) {
-    const parsed = decryptData(stored); // Use Decrypt
+    const parsed = JSON.parse(stored);
 
     // Helper to merge lists (Defaults + Saved)
     const mergeLists = (defaults: any[], saved: any[]) => {
@@ -349,14 +302,14 @@ export const getSettings = (): Settings => {
 };
 
 export const saveSettings = (settings: Settings) => {
-  localStorage.setItem(KEY_SETTINGS, encryptData(settings));
+  localStorage.setItem(KEY_SETTINGS, JSON.stringify(settings));
   addLog('CONFIG', 'Đã cập nhật cấu hình hệ thống.');
 };
 
 // --- Seating ---
 export const getSeatingMap = (): Seat[] => {
   const stored = localStorage.getItem(KEY_SEATING);
-  if (stored) return decryptData(stored); // Use Decrypt
+  if (stored) return JSON.parse(stored);
   const seats: Seat[] = [];
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
@@ -367,7 +320,7 @@ export const getSeatingMap = (): Seat[] => {
 };
 
 export const saveSeatingMap = (seats: Seat[]) => {
-  localStorage.setItem(KEY_SEATING, encryptData(seats));
+  localStorage.setItem(KEY_SEATING, JSON.stringify(seats));
   addLog('SEATING', 'Đã lưu sơ đồ chỗ ngồi mới.');
 };
 
@@ -389,10 +342,10 @@ export const exportFullData = () => {
     attendance: getAttendance(),
     seating: getSeatingMap(),
     settings: getSettings(),
-    funds: getFundTransactions(),
+    funds: getFundTransactions(), // Include funds
     gasUrl: getGasUrl(),
     exportDate: new Date().toISOString(),
-    version: '4.0'
+    version: '4.1' // Stable Release
   };
   return JSON.stringify(data, null, 2);
 };
@@ -403,13 +356,12 @@ export const importFullData = (jsonString: string): boolean => {
     if (!data.students || !data.settings) {
       throw new Error("File không đúng định dạng.");
     }
-    // Save Obfuscated
-    localStorage.setItem(KEY_STUDENTS, encryptData(data.students));
-    if (data.conduct) localStorage.setItem(KEY_CONDUCT, encryptData(data.conduct));
-    if (data.attendance) localStorage.setItem(KEY_ATTENDANCE, encryptData(data.attendance));
-    if (data.seating) localStorage.setItem(KEY_SEATING, encryptData(data.seating));
-    if (data.settings) localStorage.setItem(KEY_SETTINGS, encryptData(data.settings));
-    if (data.funds) localStorage.setItem(KEY_FUNDS, encryptData(data.funds));
+    localStorage.setItem(KEY_STUDENTS, JSON.stringify(data.students));
+    if (data.conduct) localStorage.setItem(KEY_CONDUCT, JSON.stringify(data.conduct));
+    if (data.attendance) localStorage.setItem(KEY_ATTENDANCE, JSON.stringify(data.attendance));
+    if (data.seating) localStorage.setItem(KEY_SEATING, JSON.stringify(data.seating));
+    if (data.settings) localStorage.setItem(KEY_SETTINGS, JSON.stringify(data.settings));
+    if (data.funds) localStorage.setItem(KEY_FUNDS, JSON.stringify(data.funds));
     if (data.gasUrl) localStorage.setItem(KEY_GAS_URL, data.gasUrl);
     addLog('SYSTEM', 'Đã khôi phục dữ liệu từ file backup thành công.');
     return true;
@@ -435,13 +387,14 @@ export const uploadToCloud = async (): Promise<boolean> => {
             attendance: getAttendance(),
             seating: getSeatingMap(),
             settings: getSettings(),
-            funds: getFundTransactions(),
+            funds: getFundTransactions(), // Sync funds
             timestamp: new Date().toISOString()
         }
     };
     try {
         addLog('CLOUD', 'Đang gửi dữ liệu lên Google Sheets...');
         const response = await fetch(url, { method: 'POST', body: JSON.stringify(payload) });
+        // Try parsing JSON, if fail, usually means HTML error page
         try {
             const result = await response.json();
             if (result.status === 'success') {
@@ -472,17 +425,17 @@ export const downloadFromCloud = async (): Promise<boolean> => {
             result = JSON.parse(text);
         } catch (e) {
              console.error("Cloud response is not JSON:", text.substring(0, 100));
-             throw new Error("Dữ liệu trả về không phải JSON.");
+             throw new Error("Dữ liệu trả về không phải JSON (Có thể do lỗi quyền truy cập hoặc URL sai). Hãy kiểm tra lại Permissions là 'Anyone'.");
         }
 
         if (result.status === 'success' && result.data) {
             const { students, conduct, attendance, seating, settings, funds } = result.data;
-            if (students) localStorage.setItem(KEY_STUDENTS, encryptData(students));
-            if (conduct) localStorage.setItem(KEY_CONDUCT, encryptData(conduct));
-            if (attendance) localStorage.setItem(KEY_ATTENDANCE, encryptData(attendance));
-            if (seating) localStorage.setItem(KEY_SEATING, encryptData(seating));
-            if (settings) localStorage.setItem(KEY_SETTINGS, encryptData(settings));
-            if (funds) localStorage.setItem(KEY_FUNDS, encryptData(funds));
+            if (students) localStorage.setItem(KEY_STUDENTS, JSON.stringify(students));
+            if (conduct) localStorage.setItem(KEY_CONDUCT, JSON.stringify(conduct));
+            if (attendance) localStorage.setItem(KEY_ATTENDANCE, JSON.stringify(attendance));
+            if (seating) localStorage.setItem(KEY_SEATING, JSON.stringify(seating));
+            if (settings) localStorage.setItem(KEY_SETTINGS, JSON.stringify(settings));
+            if (funds) localStorage.setItem(KEY_FUNDS, JSON.stringify(funds));
             addLog('CLOUD', 'Đã tải và cập nhật dữ liệu từ đám mây.');
             return true;
         } else {
@@ -496,19 +449,23 @@ export const downloadFromCloud = async (): Promise<boolean> => {
 };
 
 // --- Student API (Remote) ---
-export const fetchStudentNamesOnly = async (): Promise<{id: string, name: string}[]> => {
+// UPDATED: Now fetches full student list to allow auth (roles, password) on client side
+export const fetchStudentsForPortal = async (): Promise<Student[]> => {
     const url = getGasUrl();
     // Fallback to local if no URL (Testing mode)
-    if (!url) return getStudents().map(s => ({ id: s.id, name: s.name }));
+    if (!url) return getStudents();
 
     try {
-        const response = await fetch(url, { method: 'POST', body: JSON.stringify({ action: 'get_names' }) });
+        const response = await fetch(url, { method: 'POST', body: JSON.stringify({ action: 'load' }) });
         const result = await response.json();
-        if (result.status === 'success') return result.data;
-        return [];
+        // The load action returns { data: { students: [...] } }
+        if (result.status === 'success' && result.data && result.data.students) {
+            return result.data.students;
+        }
+        return getStudents();
     } catch (e) {
         console.error("Cloud fetch error, using local fallback", e);
-        return getStudents().map(s => ({ id: s.id, name: s.name }));
+        return getStudents();
     }
 };
 
@@ -541,7 +498,7 @@ export const fetchSettings = async (): Promise<Settings> => {
     }
 }
 
-// NEW: Fetch Roles from Cloud
+// Deprecated in v4 (Roles are on Student object now)
 export const fetchRolesFromCloud = async (): Promise<any[]> => {
     return [];
 }
@@ -588,12 +545,16 @@ export const fetchPendingReportsCloud = async (): Promise<boolean> => {
              const currentLocal = getPendingReports();
              const newReports = result.data as PendingReport[];
              
+             // Merge strategy: Keep local state if exists (preserving APPROVED/REJECTED), add new ones as PENDING
              const mergedReports = [...currentLocal];
+             
              newReports.forEach(cloudReport => {
                  const exists = mergedReports.find(local => local.id === cloudReport.id);
                  if (!exists) {
+                     // Add new report from cloud
                      mergedReports.push({ ...cloudReport, status: 'PENDING' });
                  }
+                 // If exists, we ignore cloud version to respect local processing status
              });
              
              savePendingReports(mergedReports);

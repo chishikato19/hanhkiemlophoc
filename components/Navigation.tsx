@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Users, ClipboardList, LayoutGrid, BookOpen, Cloud, UploadCloud, DownloadCloud, Loader, AlertCircle, Inbox, ShoppingBag, Banknote } from 'lucide-react';
+import { Users, ClipboardList, LayoutGrid, BookOpen, Cloud, UploadCloud, DownloadCloud, Loader, AlertCircle, Inbox, ShoppingBag, Banknote, Settings } from 'lucide-react';
 import { uploadToCloud, downloadFromCloud } from '../services/dataService';
 
 interface NavProps {
@@ -16,11 +16,12 @@ const Navigation: React.FC<NavProps> = ({ currentTab, setTab, hasUnsavedChanges 
   const tabs = [
     { id: 'students', label: 'Học Sinh', icon: Users },
     { id: 'conduct', label: 'Hạnh Kiểm', icon: ClipboardList },
-    { id: 'seating', label: 'Sơ Đồ Lớp', icon: LayoutGrid },
+    { id: 'seating', label: 'Sơ Đồ', icon: LayoutGrid },
     { id: 'fund', label: 'Quỹ Lớp', icon: Banknote },
     { id: 'store', label: 'Cửa Hàng', icon: ShoppingBag },
-    { id: 'inbox', label: 'Duyệt Báo Cáo', icon: Inbox },
-    { id: 'docs', label: 'Nhật Ký & HDSD', icon: BookOpen },
+    { id: 'inbox', label: 'Hộp Thư', icon: Inbox },
+    { id: 'settings', label: 'Cấu Hình', icon: Settings },
+    { id: 'docs', label: 'HDSD', icon: BookOpen },
   ];
 
   const handleTabChange = (tabId: string) => {
@@ -66,7 +67,7 @@ const Navigation: React.FC<NavProps> = ({ currentTab, setTab, hasUnsavedChanges 
             </div>
             
             <div className="flex items-center space-x-2">
-                <div className="flex space-x-1 overflow-x-auto mr-2">
+                <div className="flex space-x-1 overflow-x-auto mr-2 no-scrollbar">
                     {tabs.map((tab) => {
                     const Icon = tab.icon;
                     const isActive = currentTab === tab.id;
@@ -74,14 +75,14 @@ const Navigation: React.FC<NavProps> = ({ currentTab, setTab, hasUnsavedChanges 
                         <button
                         key={tab.id}
                         onClick={() => handleTabChange(tab.id)}
-                        className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                             isActive
                             ? 'bg-indigo-800 text-white shadow-inner'
                             : 'text-indigo-100 hover:bg-indigo-600'
                         }`}
                         >
                         <Icon className="w-4 h-4 mr-2" />
-                        <span className="hidden md:inline">{tab.label}</span>
+                        <span className="hidden lg:inline">{tab.label}</span>
                         {isActive && hasUnsavedChanges && (
                             <span className="ml-1 w-2 h-2 bg-red-400 rounded-full animate-pulse" title="Chưa lưu"></span>
                         )}

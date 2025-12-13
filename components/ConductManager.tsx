@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Student, ConductRecord, Settings, AcademicRank, BehaviorItem } from '../types';
 import { getStudents, getConductRecords, saveConductRecords, getSettings, saveSettings, uploadToCloud, saveStudents } from '../services/dataService';
-import { CheckSquare, PieChart as PieChartIcon, Settings as SettingsIcon, CloudUpload, Clock } from 'lucide-react';
+import { CheckSquare, PieChart as PieChartIcon, CloudUpload, Clock } from 'lucide-react';
 import { addLog } from '../utils/logger';
 import { generateClassAnalysis } from '../utils/analytics';
 import { calculateWeeklyCoins, checkBadges } from '../utils/gamification';
@@ -10,7 +10,6 @@ import { calculateWeeklyCoins, checkBadges } from '../utils/gamification';
 // Sub Components
 import InputView from './conduct/InputView';
 import StatsView from './conduct/StatsView';
-import SettingsModal from './conduct/SettingsModal';
 import StudentDetailModal from './conduct/StudentDetailModal';
 import AttendanceReport from './conduct/AttendanceReport';
 
@@ -25,7 +24,6 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   const [viewMode, setViewMode] = useState<'input' | 'stats' | 'attendance'>('input');
   
   const [selectedWeek, setSelectedWeek] = useState(1);
-  const [showSettings, setShowSettings] = useState(false);
   const [selectedStudentForDetail, setSelectedStudentForDetail] = useState<Student | null>(null);
 
   const [statsStartWeek, setStatsStartWeek] = useState(1);
@@ -74,39 +72,6 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       const newSettings = { ...settings, ...partialSettings };
       setSettings(newSettings);
       saveSettings(newSettings);
-  };
-
-  const recalculateAllScores = (newSettings: Settings) => {
-      const currentRecords = records;
-      const finalRecs = currentRecords.map(rec => {
-          let score = newSettings.defaultScore;
-          rec.violations.forEach(v => {
-              const item = newSettings.behaviorConfig.violations.find(i => i.label === v);
-              if (item) score += item.points;
-              else { const match = v.match(/\(([+-]?\d+)đ\)/); if (match && match[1]) score += parseInt(match[1]); }
-          });
-          (rec.positiveBehaviors || []).forEach(p => {
-               const item = newSettings.behaviorConfig.positives.find(i => i.label === p);
-               if (item) score += item.points;
-               else { const match = p.match(/\(([+-]?\d+)đ\)/); if (match && match[1]) score += parseInt(match[1]); }
-          });
-          return { ...rec, score: Math.max(0, Math.min(100, score)) };
-      });
-      setRecords(finalRecs);
-      saveConductRecords(finalRecs);
-  };
-
-  const migrateBehaviorName = (oldName: string, newName: string, isPositive: boolean) => {
-      const finalRecs = records.map(rec => {
-          let hasChange = false;
-          let newViolations = [...rec.violations];
-          let newPositives = [...(rec.positiveBehaviors || [])];
-          if (!isPositive) { if (newViolations.includes(oldName)) { newViolations = newViolations.map(v => v === oldName ? newName : v); hasChange = true; } } 
-          else { if (newPositives.includes(oldName)) { newPositives = newPositives.map(p => p === oldName ? newName : p); hasChange = true; } }
-          return hasChange ? { ...rec, violations: newViolations, positiveBehaviors: newPositives } : rec;
-      });
-      setRecords(finalRecs);
-      saveConductRecords(finalRecs);
   };
 
   const updateRecord = (studentId: string, week: number, updates: Partial<ConductRecord>) => {
@@ -295,16 +260,6 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      {showSettings && (
-          <SettingsModal 
-            settings={settings}
-            updateSettings={updateSettings}
-            onClose={() => setShowSettings(false)}
-            recalculateAllScores={recalculateAllScores}
-            migrateBehaviorName={migrateBehaviorName}
-          />
-      )}
-
       <StudentDetailModal 
         student={selectedStudentForDetail} 
         records={records} 
@@ -324,7 +279,6 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
         </div>
         <div className="flex items-center gap-2">
             <button onClick={handleCloudSave} disabled={isSaving} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 font-bold">{isSaving ? 'Đang lưu...' : <><CloudUpload size={18} /> Lưu & Sync</>}</button>
-            <button onClick={() => setShowSettings(true)} className="flex items-center gap-2 text-gray-600 bg-white border px-3 py-2 rounded hover:bg-gray-100 shadow-sm"><SettingsIcon size={18} /> Cấu hình</button>
         </div>
       </div>
 

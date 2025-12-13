@@ -1,13 +1,10 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Student, Seat, ROWS, COLS, AcademicRank } from '../types';
-import { getStudents, getSeatingMap, saveSeatingMap, getSettings, uploadToCloud } from '../services/dataService';
+import { getStudents, getSeatingMap, saveSeatingMap, getSettings } from '../services/dataService';
 import { autoArrangeSeating } from '../utils/seatingLogic';
-import { Printer, Shuffle, Save, Info, RotateCcw, Crown, ImageIcon, CloudUpload, Loader } from 'lucide-react';
+import { Printer, Shuffle, Save, Info, RotateCcw, Crown } from 'lucide-react';
 import { addLog } from '../utils/logger';
-
-// Declare html2canvas globally as it's loaded via CDN
-declare const html2canvas: any;
 
 interface Props {
     setHasUnsavedChanges: (val: boolean) => void;
@@ -17,8 +14,6 @@ const SeatingMap: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [seats, setSeats] = useState<Seat[]>([]);
   const [draggedSeat, setDraggedSeat] = useState<Seat | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const mapRef = useRef<HTMLDivElement>(null);
   const settings = getSettings();
 
   useEffect(() => {
@@ -77,41 +72,10 @@ const SeatingMap: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       }
   };
 
-  const saveLayoutLocal = () => {
+  const saveLayout = () => {
       saveSeatingMap(seats);
-      setHasUnsavedChanges(false); // Mark as saved
-      alert('Đã lưu sơ đồ vào máy!');
-  };
-
-  const handleCloudSave = async () => {
-      setIsSaving(true);
-      // 1. Save locally first to ensure dataService picks up the latest state
-      saveSeatingMap(seats);
-      setHasUnsavedChanges(false);
-
-      // 2. Upload to Google Sheet
-      const success = await uploadToCloud();
-      setIsSaving(false);
-      
-      if (success) {
-          alert('Đã đồng bộ sơ đồ lên Google Sheet thành công!');
-      } else {
-          alert('Lỗi khi lưu lên Cloud. Vui lòng kiểm tra kết nối.');
-      }
-  };
-
-  const handleDownloadImage = async () => {
-      if (!mapRef.current) return;
-      try {
-          const canvas = await html2canvas(mapRef.current, { scale: 2, useCORS: true });
-          const link = document.createElement('a');
-          link.download = `SoDoLopHoc_${new Date().toISOString().split('T')[0]}.png`;
-          link.href = canvas.toDataURL('image/png');
-          link.click();
-      } catch (e) {
-          console.error(e);
-          alert("Lỗi khi tạo ảnh. Vui lòng thử lại.");
-      }
+      setHasUnsavedChanges(true);
+      alert('Đã lưu sơ đồ!');
   };
 
   const handlePrint = () => {
@@ -257,43 +221,29 @@ const SeatingMap: React.FC<Props> = ({ setHasUnsavedChanges }) => {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="flex flex-col xl:flex-row justify-between items-center mb-6 no-print gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-6 no-print gap-4">
         <div>
              <h2 className="text-2xl font-bold text-gray-800">Sơ Đồ Lớp Học</h2>
-             <p className="text-sm text-gray-500">Kéo thả để đổi chỗ. Dữ liệu tự động lưu vào máy khi di chuyển.</p>
+             <p className="text-sm text-gray-500">Kéo thả để đổi chỗ. Dữ liệu tự động lưu khi di chuyển.</p>
         </div>
         <div className="flex flex-wrap gap-2 justify-center">
-            <button onClick={handleReset} className="flex items-center gap-1 bg-red-100 text-red-700 px-3 py-2 rounded hover:bg-red-200 text-sm font-medium">
-                <RotateCcw size={16} /> Reset
+            <button onClick={handleReset} className="flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded hover:bg-red-200">
+                <RotateCcw size={18} /> Reset
             </button>
-            <button onClick={handleAutoArrange} className="flex items-center gap-1 bg-indigo-100 text-indigo-700 px-3 py-2 rounded hover:bg-indigo-200 text-sm font-medium">
-                <Shuffle size={16} /> Tự động
+            <button onClick={handleAutoArrange} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded shadow hover:bg-indigo-700">
+                <Shuffle size={18} /> <span className="hidden sm:inline">Tự động xếp</span>
             </button>
-            
-            <div className="w-px h-8 bg-gray-300 mx-1 hidden sm:block"></div>
-
-            <button onClick={handleDownloadImage} className="flex items-center gap-1 bg-white text-gray-700 border px-3 py-2 rounded hover:bg-gray-50 text-sm font-medium">
-                <ImageIcon size={16} /> Xuất ảnh
+            <button onClick={saveLayout} className="flex items-center gap-2 bg-white text-gray-700 border px-4 py-2 rounded hover:bg-gray-100">
+                <Save size={18} /> Lưu
             </button>
-             <button onClick={handlePrint} className="flex items-center gap-1 bg-gray-700 text-white px-3 py-2 rounded hover:bg-gray-800 text-sm font-medium">
-                <Printer size={16} /> In
-            </button>
-
-            <div className="w-px h-8 bg-gray-300 mx-1 hidden sm:block"></div>
-
-            <button onClick={saveLayoutLocal} className="flex items-center gap-1 bg-white border border-green-500 text-green-700 px-3 py-2 rounded hover:bg-green-50 text-sm font-medium">
-                <Save size={16} /> Lưu máy
-            </button>
-            
-            <button onClick={handleCloudSave} disabled={isSaving} className="flex items-center gap-1 bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 text-sm font-bold">
-                {isSaving ? <Loader size={16} className="animate-spin"/> : <CloudUpload size={16} />} 
-                Lưu Google Sheet
+             <button onClick={handlePrint} className="flex items-center gap-2 bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-900">
+                <Printer size={18} /> In
             </button>
         </div>
       </div>
 
       {/* Classroom Container */}
-      <div ref={mapRef} className="bg-white p-4 sm:p-8 rounded-xl shadow-lg border-t-8 border-indigo-600 overflow-x-auto print-only">
+      <div className="bg-white p-4 sm:p-8 rounded-xl shadow-lg border-t-8 border-indigo-600 overflow-x-auto print-only">
          <div className="text-center mb-8 border-b-2 border-dashed border-gray-300 pb-4">
             <div className="inline-block px-8 py-2 bg-gray-800 text-white font-bold rounded-lg uppercase tracking-widest text-sm">Bảng Giáo Viên</div>
          </div>

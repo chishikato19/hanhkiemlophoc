@@ -10,6 +10,7 @@ import Documentation from './components/Documentation';
 import LoginGate from './components/LoginGate';
 import StudentPortal from './components/StudentPortal';
 import InboxManager from './components/InboxManager';
+import SettingsManager from './components/SettingsManager';
 import { getSettings } from './services/dataService';
 
 const App: React.FC = () => {
@@ -50,6 +51,7 @@ const App: React.FC = () => {
              <InboxManager />
         </div>
       );
+      case 'settings': return <SettingsManager />;
       case 'docs': return <Documentation />;
       default: return <StudentManager setHasUnsavedChanges={setHasUnsavedChanges} />;
     }

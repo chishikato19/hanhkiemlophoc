@@ -1,25 +1,22 @@
 
-import React, { useState, useEffect } from 'react';
-import { fetchStudentNamesOnly, sendStudentReport, fetchBehaviorList, fetchRolesFromCloud, fetchSettings, getPendingReports } from '../services/dataService';
-import { Send, CheckCircle, AlertTriangle, Clock, UserCheck, Search, CheckSquare, Square, Shield, Lock, ArrowLeft, LogOut, Coins, Award, Banknote } from 'lucide-react';
-import { PendingReport, AttendanceStatus, BehaviorItem, StudentRole, Settings, RoleBudgetConfig } from '../types';
-
-interface SimpleStudent { id: string; name: string; }
+import React, { useState, useEffect, useMemo } from 'react';
+import { fetchStudentsForPortal, sendStudentReport, fetchBehaviorList, fetchSettings, getPendingReports } from '../services/dataService';
+import { Send, CheckCircle, AlertTriangle, Clock, Search, CheckSquare, Square, Shield, Lock, ArrowLeft, LogOut, Coins, Award, Banknote, User } from 'lucide-react';
+import { PendingReport, AttendanceStatus, BehaviorItem, Settings, Student, ClassRole } from '../types';
 
 const StudentPortal: React.FC = () => {
     // Data State
-    const [names, setNames] = useState<SimpleStudent[]>([]);
+    const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [behaviors, setBehaviors] = useState<BehaviorItem[]>([]);
-    const [roles, setRoles] = useState<StudentRole[]>([]);
     const [settings, setSettings] = useState<Settings | null>(null);
     const [allPendingReports, setAllPendingReports] = useState<PendingReport[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Flow State
-    const [view, setView] = useState<'ROLE_SELECT' | 'AUTH' | 'USER_SELECT' | 'DASHBOARD' | 'SUCCESS'>('ROLE_SELECT');
-    const [selectedRole, setSelectedRole] = useState<StudentRole | null>(null);
+    const [view, setView] = useState<'USER_SELECT' | 'AUTH' | 'DASHBOARD' | 'SUCCESS'>('USER_SELECT');
+    const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
     const [passwordInput, setPasswordInput] = useState('');
-    const [currentUser, setCurrentUser] = useState<SimpleStudent | null>(null);
+    const [currentUser, setCurrentUser] = useState<Student | null>(null);
     const [submitted, setSubmitted] = useState(false);
 
     // Dashboard State
@@ -27,6 +24,7 @@ const StudentPortal: React.FC = () => {
     const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([]);
     const [attendanceMarks, setAttendanceMarks] = useState<Record<string, AttendanceStatus | null>>({});
     const [studentSearch, setStudentSearch] = useState('');
+    const [userSearch, setUserSearch] = useState('');
     const [selectedWeek, setSelectedWeek] = useState(1);
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [selectedBehaviorId, setSelectedBehaviorId] = useState('');
@@ -36,18 +34,21 @@ const StudentPortal: React.FC = () => {
 
     useEffect(() => {
         const loadData = async () => {
-            const [nameData, behaviorData, roleData, settingsData] = await Promise.all([
-                fetchStudentNamesOnly(),
-                fetchBehaviorList(),
-                fetchRolesFromCloud(),
-                fetchSettings()
-            ]);
-            setNames(nameData);
-            setBehaviors(behaviorData);
-            setRoles(roleData || []);
-            setSettings(settingsData);
-            setAllPendingReports(getPendingReports()); 
-            setLoading(false);
+            try {
+                const [studentData, behaviorData, settingsData] = await Promise.all([
+                    fetchStudentsForPortal(),
+                    fetchBehaviorList(),
+                    fetchSettings()
+                ]);
+                setAllStudents(studentData);
+                setBehaviors(behaviorData);
+                setSettings(settingsData);
+                setAllPendingReports(getPendingReports()); 
+            } catch (error) {
+                console.error("Failed to load portal data", error);
+            } finally {
+                setLoading(false);
+            }
         };
         loadData();
     }, []);
@@ -62,9 +63,11 @@ const StudentPortal: React.FC = () => {
     };
 
     const getRoleBudget = (): { limit: number, maxPerStudent: number } => {
-        if (!settings || !selectedRole) return { limit: 0, maxPerStudent: 0 };
+        if (!settings || !currentUser) return { limit: 0, maxPerStudent: 0 };
         const budgets = settings.gamification.roleBudgets || { monitorWeeklyBudget: 50, viceWeeklyBudget: 30, maxRewardPerStudent: 5 };
-        if (selectedRole.name.toLowerCase().includes('trưởng')) {
+        
+        // Prioritize Monitor budget if user has multiple roles
+        if (currentUser.roles?.includes('MONITOR')) {
             return { limit: budgets.monitorWeeklyBudget, maxPerStudent: budgets.maxRewardPerStudent };
         }
         return { limit: budgets.viceWeeklyBudget, maxPerStudent: budgets.maxRewardPerStudent };
@@ -77,55 +80,55 @@ const StudentPortal: React.FC = () => {
             .reduce((sum, r) => sum + (r.rewardAmount || 0), 0);
     };
 
-    const handleRoleSelect = (role: StudentRole) => {
-        setSelectedRole(role);
+    // --- Permissions Logic ---
+    const getPermissions = (roles: ClassRole[] = []) => {
+        const perms = new Set<string>();
+        if (roles.includes('MONITOR')) { perms.add('ATTENDANCE'); perms.add('VIOLATION'); perms.add('BONUS'); }
+        if (roles.includes('VICE_DISCIPLINE')) { perms.add('ATTENDANCE'); perms.add('VIOLATION'); }
+        if (roles.includes('VICE_STUDY')) { perms.add('VIOLATION'); perms.add('BONUS'); }
+        if (roles.includes('VICE_LABOR')) { perms.add('VIOLATION'); }
+        if (roles.includes('TREASURER')) { perms.add('FUND'); }
+        return perms;
+    };
+
+    const handleUserSelect = (id: string) => {
+        setSelectedStudentId(id);
         setPasswordInput('');
         setView('AUTH');
     };
 
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
-        if (selectedRole && passwordInput === selectedRole.password) {
-            if (selectedRole.assignedStudentIds.length === 1) {
-                const s = names.find(n => n.id === selectedRole.assignedStudentIds[0]);
-                if (s) {
-                    setCurrentUser(s);
-                    if (selectedRole.permissions.includes('ATTENDANCE')) setReportType('ATTENDANCE');
-                    else if (selectedRole.permissions.includes('FUND')) setReportType('FUND');
-                    else if (selectedRole.permissions.includes('BONUS')) setReportType('BONUS');
-                    else setReportType('VIOLATION');
-                    setView('DASHBOARD');
-                } else {
-                    setView('USER_SELECT');
-                }
-            } else {
-                setView('USER_SELECT');
-            }
+        const student = allStudents.find(s => s.id === selectedStudentId);
+        if (!student) return;
+
+        // Verify password (default '123' if not set)
+        const actualPass = student.password || '123';
+        if (passwordInput === actualPass) {
+            setCurrentUser(student);
+            
+            // Set default view based on permissions
+            const perms = getPermissions(student.roles);
+            if (perms.has('ATTENDANCE')) setReportType('ATTENDANCE');
+            else if (perms.has('FUND')) setReportType('FUND');
+            else if (perms.has('BONUS')) setReportType('BONUS');
+            else if (perms.has('VIOLATION')) setReportType('VIOLATION');
+            
+            setView('DASHBOARD');
         } else {
             alert("Mật khẩu không đúng!");
         }
     };
 
-    const handleUserSelect = (studentId: string) => {
-        const s = names.find(n => n.id === studentId);
-        if (s && selectedRole) {
-            setCurrentUser(s);
-            if (selectedRole.permissions.includes('ATTENDANCE')) setReportType('ATTENDANCE');
-            else if (selectedRole.permissions.includes('FUND')) setReportType('FUND');
-            else if (selectedRole.permissions.includes('BONUS')) setReportType('BONUS');
-            else setReportType('VIOLATION');
-            setView('DASHBOARD');
-        }
-    };
-
     const handleLogout = () => {
-        setSelectedRole(null);
         setCurrentUser(null);
+        setSelectedStudentId(null);
         resetSelection();
-        setView('ROLE_SELECT');
+        setView('USER_SELECT');
     };
 
-    const filteredStudents = names.filter(n => n.name.toLowerCase().includes(studentSearch.toLowerCase()));
+    const filteredStudentsForSelection = allStudents.filter(n => n.name.toLowerCase().includes(userSearch.toLowerCase()));
+    const filteredTargetStudents = allStudents.filter(n => n.name.toLowerCase().includes(studentSearch.toLowerCase()));
 
     const toggleTargetStudent = (id: string) => {
         if (selectedTargetIds.includes(id)) {
@@ -136,13 +139,14 @@ const StudentPortal: React.FC = () => {
     };
 
     const handleSelectAllVisible = () => {
-        const allVisibleSelected = filteredStudents.every(s => selectedTargetIds.includes(s.id));
+        const visibleIds = filteredTargetStudents.map(s => s.id);
+        const allVisibleSelected = visibleIds.every(id => selectedTargetIds.includes(id));
+        
         if (allVisibleSelected) {
-            const visibleIds = filteredStudents.map(s => s.id);
             setSelectedTargetIds(selectedTargetIds.filter(id => !visibleIds.includes(id)));
         } else {
             const newIds = [...selectedTargetIds];
-            filteredStudents.forEach(s => { if (!newIds.includes(s.id)) newIds.push(s.id); });
+            visibleIds.forEach(id => { if (!newIds.includes(id)) newIds.push(id); });
             setSelectedTargetIds(newIds);
         }
     };
@@ -157,31 +161,34 @@ const StudentPortal: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!currentUser || !selectedRole) return;
+        if (!currentUser) return;
         
         setLoading(true);
         let promises: Promise<boolean>[] = [];
+
+        // Common Report Base
+        const createReport = (target: Student, type: 'ATTENDANCE' | 'VIOLATION' | 'BONUS' | 'FUND', content: string, extra: any = {}): PendingReport => ({
+            id: `REP-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            timestamp: new Date().toISOString(),
+            targetDate: selectedDate,
+            week: selectedWeek,
+            reporterName: currentUser.name,
+            roleId: (currentUser.roles || []).join(','),
+            targetStudentName: target.name,
+            type,
+            content,
+            note,
+            ...extra
+        });
 
         if (reportType === 'ATTENDANCE') {
             const markedIds = Object.keys(attendanceMarks);
             if (markedIds.length === 0) { alert("Chưa chọn học sinh nào!"); setLoading(false); return; }
             promises = markedIds.map(targetId => {
-                const target = names.find(n => n.id === targetId);
+                const target = allStudents.find(n => n.id === targetId);
                 const status = attendanceMarks[targetId];
                 if (!target || !status) return Promise.resolve(false);
-                const report: PendingReport = {
-                    id: `REP-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-                    timestamp: new Date().toISOString(),
-                    targetDate: selectedDate,
-                    week: selectedWeek,
-                    reporterName: currentUser.name,
-                    roleId: selectedRole.id,
-                    targetStudentName: target.name,
-                    type: 'ATTENDANCE',
-                    content: status,
-                    note: note
-                };
-                return sendStudentReport(report);
+                return sendStudentReport(createReport(target, 'ATTENDANCE', status));
             });
         } 
         else if (reportType === 'BONUS') {
@@ -203,22 +210,9 @@ const StudentPortal: React.FC = () => {
             }
 
             promises = selectedTargetIds.map(targetId => {
-                const target = names.find(n => n.id === targetId);
+                const target = allStudents.find(n => n.id === targetId);
                 if (!target) return Promise.resolve(false);
-                const report: PendingReport = {
-                    id: `REP-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-                    timestamp: new Date().toISOString(),
-                    targetDate: selectedDate,
-                    week: selectedWeek,
-                    reporterName: currentUser.name,
-                    roleId: selectedRole.id,
-                    targetStudentName: target.name,
-                    type: 'BONUS',
-                    content: `Thưởng nóng (+${bonusAmount} xu)`,
-                    note: note,
-                    rewardAmount: bonusAmount
-                };
-                return sendStudentReport(report);
+                return sendStudentReport(createReport(target, 'BONUS', `Thưởng nóng (+${bonusAmount} xu)`, { rewardAmount: bonusAmount }));
             });
         }
         else if (reportType === 'FUND') {
@@ -228,22 +222,9 @@ const StudentPortal: React.FC = () => {
             if (!note) { alert("Vui lòng ghi rõ khoản thu (VD: Tiền nước, Tiền Photo)"); setLoading(false); return; }
 
             promises = selectedTargetIds.map(targetId => {
-                const target = names.find(n => n.id === targetId);
+                const target = allStudents.find(n => n.id === targetId);
                 if (!target) return Promise.resolve(false);
-                const report: PendingReport = {
-                    id: `REP-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-                    timestamp: new Date().toISOString(),
-                    targetDate: selectedDate,
-                    week: selectedWeek,
-                    reporterName: currentUser.name,
-                    roleId: selectedRole.id,
-                    targetStudentName: target.name,
-                    type: 'FUND',
-                    content: `Đã thu ${new Intl.NumberFormat('vi-VN').format(amount)}đ`,
-                    note: note, 
-                    fundAmount: amount
-                };
-                return sendStudentReport(report);
+                return sendStudentReport(createReport(target, 'FUND', `Đã thu ${new Intl.NumberFormat('vi-VN').format(amount)}đ`, { fundAmount: amount }));
             });
         }
         else {
@@ -252,21 +233,9 @@ const StudentPortal: React.FC = () => {
             const behavior = behaviors.find(b => b.id === selectedBehaviorId);
             const content = behavior ? behavior.label : 'Lỗi';
             promises = selectedTargetIds.map(targetId => {
-                const target = names.find(n => n.id === targetId);
+                const target = allStudents.find(n => n.id === targetId);
                 if (!target) return Promise.resolve(false);
-                const report: PendingReport = {
-                    id: `REP-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-                    timestamp: new Date().toISOString(),
-                    targetDate: selectedDate,
-                    week: selectedWeek,
-                    reporterName: currentUser.name,
-                    roleId: selectedRole.id,
-                    targetStudentName: target.name,
-                    type: 'VIOLATION',
-                    content: content,
-                    note: note
-                };
-                return sendStudentReport(report);
+                return sendStudentReport(createReport(target, 'VIOLATION', content));
             });
         }
 
@@ -282,7 +251,7 @@ const StudentPortal: React.FC = () => {
         }, 3000);
     };
 
-    if (loading && names.length === 0) return <div className="min-h-screen flex items-center justify-center text-gray-500">Đang tải dữ liệu...</div>;
+    if (loading && allStudents.length === 0) return <div className="min-h-screen flex items-center justify-center text-gray-500">Đang tải dữ liệu...</div>;
 
     if (submitted) return (
         <div className="min-h-screen bg-green-50 flex flex-col items-center justify-center p-4 text-center">
@@ -292,33 +261,47 @@ const StudentPortal: React.FC = () => {
         </div>
     );
 
-    // 1. Role Selection
-    if (view === 'ROLE_SELECT') {
+    // 1. User Selection (Who are you?)
+    if (view === 'USER_SELECT') {
+        const studentWithRoles = filteredStudentsForSelection.filter(s => s.roles && s.roles.length > 0 && !s.roles.includes('NONE'));
+        
         return (
             <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 p-4 flex items-center justify-center">
-                <div className="w-full max-w-2xl">
-                    <div className="text-center mb-8">
+                <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6">
+                    <div className="text-center mb-6">
                         <div className="bg-orange-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-white shadow-lg">
                             <Shield size={32} />
                         </div>
-                        <h1 className="text-2xl font-bold text-gray-800">Cổng Thông Tin Lớp Học</h1>
-                        <p className="text-gray-600">Chọn vai trò của bạn để bắt đầu</p>
+                        <h1 className="text-2xl font-bold text-gray-800">Cổng Cán Bộ Lớp</h1>
+                        <p className="text-gray-600 text-sm">Vui lòng chọn tên của bạn để đăng nhập</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {roles.length === 0 && <div className="col-span-2 text-center text-gray-400 bg-white p-6 rounded-xl">Chưa có vai trò nào được cấu hình.</div>}
-                        {roles.map(role => (
+                    <div className="mb-4 relative">
+                        <Search className="absolute left-3 top-2.5 text-gray-400" size={18}/>
+                        <input 
+                            type="text" 
+                            className="w-full border p-2 pl-10 rounded-lg outline-none focus:ring-2 focus:ring-orange-500" 
+                            placeholder="Tìm tên bạn..."
+                            value={userSearch}
+                            onChange={e => setUserSearch(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                        {studentWithRoles.length === 0 && <div className="text-center text-gray-400 py-4">Không tìm thấy cán bộ lớp.</div>}
+                        {studentWithRoles.map(s => (
                             <button 
-                                key={role.id}
-                                onClick={() => handleRoleSelect(role)}
-                                className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md hover:border-orange-500 border-2 border-transparent transition-all text-left group"
+                                key={s.id}
+                                onClick={() => handleUserSelect(s.id)}
+                                className="w-full flex items-center justify-between p-3 border rounded-lg hover:bg-orange-50 hover:border-orange-200 transition-colors text-left"
                             >
-                                <div className="flex items-center justify-between mb-2">
-                                    <h3 className="font-bold text-lg text-gray-800 group-hover:text-orange-600">{role.name}</h3>
-                                    <ArrowLeft size={20} className="text-gray-300 rotate-180 group-hover:text-orange-500 transform transition-transform group-hover:translate-x-1"/>
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                    Quyền hạn: {role.permissions.map(p => p === 'ATTENDANCE' ? 'Điểm danh' : p === 'VIOLATION' ? 'Báo lỗi' : p === 'BONUS' ? 'Thưởng xu' : 'Thu quỹ').join(', ')}
+                                <div className="font-bold text-gray-800">{s.name}</div>
+                                <div className="flex gap-1">
+                                    {(s.roles || []).map(r => (
+                                        <span key={r} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium border">
+                                            {r === 'MONITOR' ? 'Lớp Trưởng' : r === 'VICE_STUDY' ? 'LP Học Tập' : r === 'VICE_DISCIPLINE' ? 'LP Nề Nếp' : r === 'VICE_LABOR' ? 'LP Lao Động' : 'Thủ Quỹ'}
+                                        </span>
+                                    ))}
                                 </div>
                             </button>
                         ))}
@@ -330,12 +313,13 @@ const StudentPortal: React.FC = () => {
 
     // 2. Authentication
     if (view === 'AUTH') {
+        const targetStudent = allStudents.find(s => s.id === selectedStudentId);
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
                 <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm">
-                    <button onClick={() => setView('ROLE_SELECT')} className="mb-4 text-gray-400 hover:text-gray-600 flex items-center gap-1 text-sm"><ArrowLeft size={14}/> Quay lại</button>
-                    <h2 className="text-xl font-bold text-gray-800 mb-2">Đăng nhập: {selectedRole?.name}</h2>
-                    <p className="text-sm text-gray-500 mb-6">Nhập mật khẩu dành cho vai trò này</p>
+                    <button onClick={() => setView('USER_SELECT')} className="mb-4 text-gray-400 hover:text-gray-600 flex items-center gap-1 text-sm"><ArrowLeft size={14}/> Quay lại</button>
+                    <h2 className="text-xl font-bold text-gray-800 mb-2">Xin chào, {targetStudent?.name}</h2>
+                    <p className="text-sm text-gray-500 mb-6">Nhập mật khẩu cá nhân của bạn</p>
                     <form onSubmit={handleLogin}>
                         <div className="relative mb-4">
                             <Lock className="absolute left-3 top-2.5 text-gray-400" size={18}/>
@@ -348,37 +332,15 @@ const StudentPortal: React.FC = () => {
                                 onChange={e => setPasswordInput(e.target.value)}
                             />
                         </div>
-                        <button type="submit" className="w-full bg-orange-600 text-white py-2 rounded-lg font-bold hover:bg-orange-700 shadow-lg">Tiếp tục</button>
+                        <button type="submit" className="w-full bg-orange-600 text-white py-2 rounded-lg font-bold hover:bg-orange-700 shadow-lg">Đăng nhập</button>
                     </form>
                 </div>
             </div>
         );
     }
 
-    // 3. User Selection
-    if (view === 'USER_SELECT') {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-                <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">Bạn là ai?</h2>
-                    <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
-                        {selectedRole?.assignedStudentIds.map(sid => {
-                            const s = names.find(n => n.id === sid);
-                            if (!s) return null;
-                            return (
-                                <button key={s.id} onClick={() => handleUserSelect(s.id)} className="p-3 border rounded-lg hover:bg-orange-50 hover:border-orange-300 font-medium text-gray-700 text-left">
-                                    {s.name}
-                                </button>
-                            );
-                        })}
-                    </div>
-                     <button onClick={() => setView('ROLE_SELECT')} className="mt-6 text-gray-400 text-sm underline">Quay lại chọn vai trò</button>
-                </div>
-            </div>
-        );
-    }
-
     // 4. Dashboard (Reporting Form)
+    const perms = getPermissions(currentUser?.roles);
     const budget = getRoleBudget();
     const usedBudget = getUsedBudget();
     const remainingBudget = budget.limit - usedBudget;
@@ -388,8 +350,12 @@ const StudentPortal: React.FC = () => {
              {/* Header */}
              <div className="bg-orange-600 text-white p-3 shadow-md shrink-0 z-20 flex justify-between items-center">
                 <div>
-                    <h1 className="font-bold text-base flex items-center gap-2"><Shield size={18}/> {selectedRole?.name}</h1>
-                    <div className="text-[10px] text-orange-100 opacity-90">Người báo: {currentUser?.name}</div>
+                    <h1 className="font-bold text-base flex items-center gap-2"><User size={18}/> {currentUser?.name}</h1>
+                    <div className="text-[10px] text-orange-100 opacity-90 flex gap-1">
+                        {(currentUser?.roles || []).map(r => (
+                            <span key={r}>{r === 'MONITOR' ? 'Lớp Trưởng' : r === 'VICE_STUDY' ? 'LP Học Tập' : r === 'VICE_DISCIPLINE' ? 'LP Nề Nếp' : r === 'VICE_LABOR' ? 'LP Lao Động' : 'Thủ Quỹ'}</span>
+                        ))}
+                    </div>
                 </div>
                 <button onClick={handleLogout} className="bg-white bg-opacity-20 p-2 rounded-full hover:bg-opacity-30"><LogOut size={16}/></button>
              </div>
@@ -399,22 +365,22 @@ const StudentPortal: React.FC = () => {
                     {/* Controls */}
                     <div className="p-3 border-b bg-gray-50 shrink-0 space-y-2">
                          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                             {selectedRole?.permissions.includes('ATTENDANCE') && (
+                             {perms.has('ATTENDANCE') && (
                                  <button type="button" onClick={() => setReportType('ATTENDANCE')} className={`flex-1 py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${reportType === 'ATTENDANCE' ? 'bg-blue-600 text-white shadow' : 'bg-white text-gray-500 border'}`}>
                                      <Clock size={14}/> Điểm Danh
                                  </button>
                              )}
-                             {selectedRole?.permissions.includes('VIOLATION') && (
+                             {perms.has('VIOLATION') && (
                                  <button type="button" onClick={() => setReportType('VIOLATION')} className={`flex-1 py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${reportType === 'VIOLATION' ? 'bg-red-600 text-white shadow' : 'bg-white text-gray-500 border'}`}>
                                      <AlertTriangle size={14}/> Vi Phạm
                                  </button>
                              )}
-                             {selectedRole?.permissions.includes('BONUS') && (
+                             {perms.has('BONUS') && (
                                  <button type="button" onClick={() => setReportType('BONUS')} className={`flex-1 py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${reportType === 'BONUS' ? 'bg-yellow-500 text-white shadow' : 'bg-white text-gray-500 border'}`}>
                                      <Coins size={14}/> Thưởng Xu
                                  </button>
                              )}
-                             {selectedRole?.permissions.includes('FUND') && (
+                             {perms.has('FUND') && (
                                  <button type="button" onClick={() => setReportType('FUND')} className={`flex-1 py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${reportType === 'FUND' ? 'bg-green-600 text-white shadow' : 'bg-white text-gray-500 border'}`}>
                                      <Banknote size={14}/> Thu Quỹ
                                  </button>
@@ -436,12 +402,12 @@ const StudentPortal: React.FC = () => {
                     <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                         <div className="p-2 border-b flex items-center gap-2 shrink-0">
                             <Search size={16} className="text-gray-400"/>
-                            <input className="flex-1 outline-none text-base" placeholder="Tìm tên..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)} />
+                            <input className="flex-1 outline-none text-base" placeholder="Tìm tên học sinh..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)} />
                             {reportType !== 'ATTENDANCE' && <button type="button" onClick={handleSelectAllVisible} className="text-xs bg-orange-100 text-orange-700 px-3 py-1.5 rounded font-bold">Chọn hết</button>}
                         </div>
                         <div className="flex-1 overflow-y-auto p-2 scroll-smooth">
-                            <div className="grid grid-cols-1 gap-2 pb-20"> {/* Added padding bottom to ensure last item visible over keyboard if needed */}
-                                {filteredStudents.map(s => {
+                            <div className="grid grid-cols-1 gap-2 pb-20"> 
+                                {filteredTargetStudents.map(s => {
                                     if (reportType === 'ATTENDANCE') {
                                         const status = attendanceMarks[s.id];
                                         return (

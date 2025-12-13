@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getLogs, clearLogs } from '../utils/logger';
 import { LogEntry } from '../types';
 import { seedData, getGasUrl, saveGasUrl, exportFullData, importFullData } from '../services/dataService';
-import { Bug, Database, Book, History, GitCommit, Download, Upload, Cloud, Save, Copy, Smile, UserCheck } from 'lucide-react';
+import { Bug, Database, Book, History, GitCommit, Download, Upload, Cloud, Save, Copy, Smile, UserCheck, Check } from 'lucide-react';
 
 const Documentation: React.FC = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -131,7 +131,7 @@ const Documentation: React.FC = () => {
                          <h4 className="font-bold text-lg mb-2 text-green-700">Mới: Quỹ Lớp (Tiền Thật)</h4>
                          <ul className="list-disc list-inside text-sm space-y-2">
                              <li><strong>Giáo viên:</strong> Quản lý thu/chi trong tab "Quỹ Lớp". Có thể thu nhanh theo danh sách.</li>
-                             <li><strong>Thủ quỹ:</strong> Đăng nhập Cổng Học Sinh - chọn tab "Thu Quỹ" để báo cáo đã thu tiền của bạn nào.</li>
+                             <li><strong>Thủ quỹ:</strong> Đăng nhập Cổng Học Sinh -> chọn tab "Thu Quỹ" để báo cáo đã thu tiền của bạn nào.</li>
                              <li><strong>Duyệt:</strong> Giáo viên vào "Hộp thư" để duyệt báo cáo của Thủ quỹ, tiền sẽ tự động cộng vào sổ quỹ.</li>
                          </ul>
                      </div>
@@ -372,26 +372,25 @@ function response(data) {
             <div className="max-w-3xl">
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-indigo-700"><History size={24}/> Lịch sử Cập nhật</h3>
                 <div className="relative border-l-2 border-indigo-200 ml-3 space-y-8 pl-6 py-2">
-                     {/* v3.0 */}
+                     {/* v4.1 */}
                      <div className="relative">
-                        <span className="absolute -left-[33px] bg-green-600 text-white rounded-full p-1.5 ring-4 ring-green-50"><Smile size={16}/></span>
-                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 3.0 (Mới nhất)</h4>
-                        <span className="text-xs text-gray-500 font-mono">Quỹ Lớp & Mobile App</span>
+                        <span className="absolute -left-[33px] bg-green-600 text-white rounded-full p-1.5 ring-4 ring-green-50"><Check size={16}/></span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 4.1 (Stable)</h4>
+                        <span className="text-xs text-gray-500 font-mono">Mobile Optimization & Stability</span>
                         <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
-                            <li><strong>Sổ Quỹ:</strong> Quản lý tiền thật, tự động tạo phiếu thu khi duyệt báo cáo của Thủ quỹ.</li>
-                            <li><strong>Nhập liệu nhóm:</strong> Thêm tính năng nhập liệu nhanh cho nhiều học sinh cùng lúc.</li>
-                            <li><strong>Tối ưu Mobile:</strong> Giao diện học sinh được thiết kế lại để dễ thao tác trên điện thoại.</li>
+                            <li><strong>Giao diện Mobile:</strong> Tối ưu hóa trải nghiệm trên điện thoại cho học sinh.</li>
+                            <li><strong>Offline Mode:</strong> Tự động lưu báo cáo vào máy khi mất mạng (không cần chờ kết nối Cloud).</li>
+                            <li><strong>Auto Funds:</strong> Tự động tạo phiếu thu tiền khi giáo viên duyệt báo cáo từ Thủ quỹ.</li>
                         </ul>
                     </div>
-                     {/* v2.4 */}
+                     {/* v4.0 */}
                      <div className="relative">
-                        <span className="absolute -left-[33px] bg-purple-600 text-white rounded-full p-1.5 ring-4 ring-purple-50"><UserCheck size={16}/></span>
-                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 2.4</h4>
-                        <span className="text-xs text-gray-500 font-mono">Danh hiệu & Báo cáo</span>
+                        <span className="absolute -left-[33px] bg-blue-600 text-white rounded-full p-1.5 ring-4 ring-blue-50"><Smile size={16}/></span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 4.0</h4>
+                        <span className="text-xs text-gray-500 font-mono">Quỹ Lớp & Batch Input</span>
                         <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
-                            <li><strong>Danh hiệu mới:</strong> Cập nhật hệ thống huy hiệu vui nhộn (Loa Phường, Giáo Sư...).</li>
-                            <li><strong>Gán thủ công:</strong> Giáo viên có thể tặng/thu hồi danh hiệu thủ công trong Shop.</li>
-                            <li><strong>Xuất báo cáo:</strong> Cho phép tải ảnh báo cáo chi tiết của từng học sinh riêng biệt.</li>
+                            <li><strong>Sổ Quỹ:</strong> Quản lý tiền thật, thu chi minh bạch.</li>
+                            <li><strong>Nhập liệu nhóm:</strong> Thêm tính năng nhập liệu nhanh cho nhiều học sinh cùng lúc.</li>
                         </ul>
                     </div>
                 </div>
