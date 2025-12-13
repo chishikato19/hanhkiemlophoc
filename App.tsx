@@ -5,6 +5,7 @@ import StudentManager from './components/StudentManager';
 import ConductManager from './components/ConductManager';
 import SeatingMap from './components/SeatingMap';
 import StoreManager from './components/StoreManager';
+import FundManager from './components/FundManager';
 import Documentation from './components/Documentation';
 import LoginGate from './components/LoginGate';
 import StudentPortal from './components/StudentPortal';
@@ -42,6 +43,7 @@ const App: React.FC = () => {
       case 'students': return <StudentManager setHasUnsavedChanges={setHasUnsavedChanges} />;
       case 'conduct': return <ConductManager setHasUnsavedChanges={setHasUnsavedChanges} />;
       case 'seating': return <SeatingMap setHasUnsavedChanges={setHasUnsavedChanges} />;
+      case 'fund': return <FundManager />;
       case 'store': return <StoreManager />;
       case 'inbox': return (
         <div className="max-w-7xl mx-auto py-6 px-4">

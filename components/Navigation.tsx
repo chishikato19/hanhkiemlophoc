@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Users, ClipboardList, LayoutGrid, BookOpen, Cloud, UploadCloud, DownloadCloud, Loader, AlertCircle, Inbox, ShoppingBag } from 'lucide-react';
+import { Users, ClipboardList, LayoutGrid, BookOpen, Cloud, UploadCloud, DownloadCloud, Loader, AlertCircle, Inbox, ShoppingBag, Banknote } from 'lucide-react';
 import { uploadToCloud, downloadFromCloud } from '../services/dataService';
 
 interface NavProps {
@@ -17,6 +17,7 @@ const Navigation: React.FC<NavProps> = ({ currentTab, setTab, hasUnsavedChanges 
     { id: 'students', label: 'Học Sinh', icon: Users },
     { id: 'conduct', label: 'Hạnh Kiểm', icon: ClipboardList },
     { id: 'seating', label: 'Sơ Đồ Lớp', icon: LayoutGrid },
+    { id: 'fund', label: 'Quỹ Lớp', icon: Banknote },
     { id: 'store', label: 'Cửa Hàng', icon: ShoppingBag },
     { id: 'inbox', label: 'Duyệt Báo Cáo', icon: Inbox },
     { id: 'docs', label: 'Nhật Ký & HDSD', icon: BookOpen },

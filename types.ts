@@ -16,6 +16,9 @@ export interface InventoryItem {
   count: number;
 }
 
+// Student Roles Definition
+export type ClassRole = 'MONITOR' | 'VICE_STUDY' | 'VICE_DISCIPLINE' | 'VICE_LABOR' | 'TREASURER' | 'NONE';
+
 export interface Student {
   id: string;
   name: string;
@@ -23,21 +26,24 @@ export interface Student {
   rank: AcademicRank;
   isTalkative: boolean;
   isActive?: boolean;
-  balance?: number; // Coin balance
-  badges?: string[]; // Array of Badge IDs unlocked
-  displayedBadges?: string[]; // NEW: Specific badges selected by teacher to display (Max 5)
-  inventory?: InventoryItem[]; // Items purchased
-  avatarUrl?: string; // Current avatar URL
-  ownedAvatars?: string[]; // List of Avatar IDs owned
-  frameUrl?: string; // Current frame ID/Class
-  ownedFrames?: string[]; // List of Frame IDs owned
+  password?: string;
+  roles?: ClassRole[];
+  balance?: number;
+  badges?: string[];
+  displayedBadges?: string[];
+  inventory?: InventoryItem[]; 
+  avatarUrl?: string; 
+  ownedAvatars?: string[];
+  frameUrl?: string;
+  ownedFrames?: string[];
+  hasPrioritySeating?: boolean;
 }
 
 export interface ConductRecord {
   id: string;
   studentId: string;
   week: number;
-  score: number; // 0-100
+  score: number;
   violations: string[];
   positiveBehaviors?: string[];
   note?: string;
@@ -53,39 +59,75 @@ export enum AttendanceStatus {
 export interface AttendanceRecord {
   id: string;
   studentId: string;
-  date: string; // YYYY-MM-DD
+  date: string;
   status: AttendanceStatus;
   note?: string;
 }
 
-// Data submitted by students via Portal
 export interface PendingReport {
   id: string;
-  timestamp: string; // Submission time
-  targetDate?: string; // The actual date of the incident
-  week?: number; // The week of the incident
-  reporterName?: string; // Who submitted this
-  targetStudentName: string; // Who is being reported
-  type: 'VIOLATION' | 'ATTENDANCE';
-  content: string; // Violation name or Attendance status
+  timestamp: string;
+  targetDate?: string;
+  week?: number;
+  reporterName?: string;
+  targetStudentName: string;
+  type: 'VIOLATION' | 'ATTENDANCE' | 'BONUS' | 'FUND'; // Added FUND
+  content: string;
   note?: string;
-  status?: 'PENDING' | 'APPROVED' | 'REJECTED'; // Tracking status
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  roleId?: string;
+  rewardAmount?: number;
+  fundAmount?: number; // Real money amount
 }
+
+// NEW: Fund Transaction (Real Money)
+export interface FundTransaction {
+  id: string;
+  date: string;
+  type: 'IN' | 'OUT'; // Thu hoặc Chi
+  amount: number;
+  category: string; // VD: Photo, Liên hoan, Quỹ lớp...
+  description: string;
+  relatedStudentIds?: string[]; // Danh sách HS đã đóng (nếu thu theo đợt)
+  pic?: string; // Người phụ trách (Giáo viên hoặc Tên thủ quỹ)
+}
+
+export interface PendingOrder {
+  id: string;
+  studentId: string;
+  studentName: string;
+  itemId: string;
+  itemName: string;
+  itemType: 'REWARD' | 'AVATAR' | 'FRAME';
+  cost: number;
+  timestamp: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+}
+
+export interface StudentRole {
+  id: string;
+  name: string;
+  permissions: ('ATTENDANCE' | 'VIOLATION' | 'BONUS' | 'FUND')[]; // Added FUND permission
+  password?: string;
+  assignedStudentIds: string[];
+}
+
+export type BehaviorCategory = 'STUDY' | 'DISCIPLINE' | 'LABOR' | 'OTHER';
 
 export interface BehaviorItem {
   id: string;
   label: string;
   points: number;
+  category?: BehaviorCategory;
 }
 
-// Gamification Interfaces
 export interface BadgeConfig {
   id: string;
   label: string;
-  icon: string; // Emoji or URL
+  icon: string;
   type: 'streak_good' | 'count_behavior' | 'no_violation_streak' | 'improvement';
-  threshold: number; // e.g., 4 weeks, 10 times
-  targetBehaviorLabel?: string; // For 'count_behavior', which behavior to count
+  threshold: number;
+  targetBehaviorLabel?: string;
   description: string;
 }
 
@@ -94,21 +136,28 @@ export interface RewardItem {
   label: string;
   cost: number;
   description?: string;
-  stock?: number; // -1 for infinite
+  stock?: number;
+  type?: 'PHYSICAL' | 'IMMUNITY' | 'SEAT_TICKET';
 }
 
 export interface AvatarItem {
   id: string;
   label: string;
-  url: string; // Image URL
+  url: string;
   cost: number;
 }
 
 export interface FrameItem {
     id: string;
     label: string;
-    image: string; // SVG Data URI or Image URL
+    image: string;
     cost: number;
+}
+
+export interface RoleBudgetConfig {
+    monitorWeeklyBudget: number;
+    viceWeeklyBudget: number;
+    maxRewardPerStudent: number;
 }
 
 export interface Settings {
@@ -137,22 +186,23 @@ export interface Settings {
     violations: BehaviorItem[];
     positives: BehaviorItem[];
   };
-  // Gamification Settings
   gamification: {
     enabled: boolean;
     badges: BadgeConfig[];
     rewards: RewardItem[];
-    avatars: AvatarItem[]; // New: Avatars list
-    frames: FrameItem[]; // New: Frames list
+    avatars: AvatarItem[];
+    frames: FrameItem[];
     coinRules: {
-      weeklyGood: number; // Coins for Good rank
-      behaviorBonus: number; // Coins per positive behavior
-      improvement: number; // Coins for improving score
-      cleanSheet: number; // Coins for 0 violations
-    }
+      weeklyGood: number;
+      behaviorBonus: number;
+      improvement: number;
+      cleanSheet: number;
+    };
+    roleBudgets?: RoleBudgetConfig;
   };
+  studentRoles?: any[];
   lockedWeeks: number[];
-  processedWeeks?: string[]; // Track which weeks have had coins distributed to avoid double counting
+  processedWeeks?: string[];
 }
 
 export interface Seat {

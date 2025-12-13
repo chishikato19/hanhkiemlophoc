@@ -22,3 +22,7 @@ export const formatGroupedList = (items: string[], configItems: BehaviorItem[]):
         return count > 1 ? `${displayName} (x${count})` : displayName;
     });
 };
+
+export const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+};

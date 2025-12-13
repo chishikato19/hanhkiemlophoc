@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
 import { Student, Settings, RewardItem, BadgeConfig, AvatarItem, FrameItem } from '../types';
-import { ShoppingBag, Award, Coins, AlertCircle, Backpack, Check, Ticket, User, Smile, PlusCircle, Trash2, LayoutTemplate, Pin, Eye, EyeOff } from 'lucide-react';
-import { purchaseItem, useItem, purchaseAvatar, equipAvatar, purchaseFrame, equipFrame } from '../utils/gamification';
+import { ShoppingBag, Award, Coins, AlertCircle, Backpack, Check, Ticket, User, Smile, PlusCircle, Trash2, LayoutTemplate, Pin, Eye, EyeOff, Send } from 'lucide-react';
+import { createPurchaseOrder, useFunctionalItem, equipAvatar, equipFrame } from '../utils/gamification';
+import { getPendingOrders, savePendingOrders } from '../services/dataService';
 import { addLog } from '../utils/logger';
 
 interface Props {
@@ -15,14 +16,20 @@ interface Props {
 const GamificationPanel: React.FC<Props> = ({ student, settings, onUpdateStudent, onClose }) => {
     const [view, setView] = useState<'store' | 'badges' | 'inventory' | 'avatars' | 'frames'>('store');
 
-    const handleBuy = (item: RewardItem) => {
-        if (!window.confirm(`Bạn muốn đổi "${item.label}" với giá ${item.cost} Xu?`)) return;
+    const handleRequestBuy = (item: RewardItem | AvatarItem | FrameItem, type: 'REWARD' | 'AVATAR' | 'FRAME') => {
+        if (!window.confirm(`Gửi yêu cầu đổi "${item.label}" với giá ${item.cost} Xu? Giáo viên sẽ duyệt yêu cầu này.`)) return;
         
-        const updatedStudent = purchaseItem(student, item);
-        if (updatedStudent) {
-            onUpdateStudent(updatedStudent);
-            addLog('SHOP', `${student.name} đã đổi quà: ${item.label} (-${item.cost} xu)`);
-            alert("Đổi quà thành công! Món quà đã được thêm vào Túi đồ.");
+        const result = createPurchaseOrder(student, item, type);
+        
+        if (result.success && result.order) {
+            onUpdateStudent(result.student);
+            
+            // Save Order
+            const currentOrders = getPendingOrders();
+            savePendingOrders([...currentOrders, result.order]);
+            
+            addLog('SHOP', `${student.name} đã gửi yêu cầu đổi: ${item.label}`);
+            alert("Đã gửi yêu cầu! Xu đã được trừ tạm thời. Vui lòng đợi giáo viên duyệt.");
         } else {
             alert("Bạn không đủ Xu để đổi món quà này!");
         }
@@ -31,8 +38,16 @@ const GamificationPanel: React.FC<Props> = ({ student, settings, onUpdateStudent
     const handleUseItem = (itemId: string) => {
         const itemConfig = settings.gamification.rewards.find(r => r.id === itemId);
         const itemName = itemConfig ? itemConfig.label : 'Món quà';
-        if (!window.confirm(`Xác nhận sử dụng "${itemName}" cho học sinh ${student.name}?`)) return;
-        const updatedStudent = useItem(student, itemId);
+        
+        if (itemConfig?.type === 'IMMUNITY') {
+             alert("Thẻ này chỉ được sử dụng bởi Giáo viên khi duyệt lỗi vi phạm.");
+             return;
+        }
+
+        if (!window.confirm(`Xác nhận sử dụng "${itemName}"?`)) return;
+        
+        const updatedStudent = useFunctionalItem(student, itemId, settings);
+        
         if (updatedStudent) {
             onUpdateStudent(updatedStudent);
             addLog('SHOP', `${student.name} đã sử dụng vật phẩm: ${itemName}`);
@@ -40,42 +55,16 @@ const GamificationPanel: React.FC<Props> = ({ student, settings, onUpdateStudent
         }
     };
 
-    const handleBuyAvatar = (avatar: AvatarItem) => {
-        const isOwned = (student.ownedAvatars || []).includes(avatar.id);
-        if (isOwned) {
-            const updated = equipAvatar(student, avatar);
-            onUpdateStudent(updated);
-            alert(`Đã thay đổi hình đại diện thành: ${avatar.label}`);
-            return;
-        }
-        if (!window.confirm(`Bạn muốn mua Avatar "${avatar.label}" với giá ${avatar.cost} Xu?`)) return;
-        const updated = purchaseAvatar(student, avatar);
-        if (updated) {
-            onUpdateStudent(updated);
-            addLog('SHOP', `${student.name} đã mua avatar: ${avatar.label} (-${avatar.cost} xu)`);
-            alert("Mua thành công và đã trang bị!");
-        } else {
-            alert("Bạn không đủ xu!");
-        }
+    const handleEquipAvatar = (avatar: AvatarItem) => {
+        const updated = equipAvatar(student, avatar);
+        onUpdateStudent(updated);
+        alert(`Đã thay đổi hình đại diện thành: ${avatar.label}`);
     };
 
-    const handleBuyFrame = (frame: FrameItem) => {
-        const isOwned = (student.ownedFrames || []).includes(frame.id);
-        if (isOwned) {
-            const updated = equipFrame(student, frame);
-            onUpdateStudent(updated);
-            alert(`Đã thay đổi khung hình thành: ${frame.label}`);
-            return;
-        }
-        if (!window.confirm(`Bạn muốn mua Khung "${frame.label}" với giá ${frame.cost} Xu?`)) return;
-        const updated = purchaseFrame(student, frame);
-        if (updated) {
-            onUpdateStudent(updated);
-            addLog('SHOP', `${student.name} đã mua khung: ${frame.label} (-${frame.cost} xu)`);
-            alert("Mua thành công và đã trang bị!");
-        } else {
-            alert("Bạn không đủ xu!");
-        }
+    const handleEquipFrame = (frame: FrameItem) => {
+        const updated = equipFrame(student, frame);
+        onUpdateStudent(updated);
+        alert(`Đã thay đổi khung hình thành: ${frame.label}`);
     }
 
     const handleToggleBadge = (badgeId: string, hasBadge: boolean) => {
@@ -168,7 +157,9 @@ const GamificationPanel: React.FC<Props> = ({ student, settings, onUpdateStudent
                                         <p className="text-sm text-gray-500 mt-1 flex-1">{item.description || 'Không có mô tả'}</p>
                                         <div className="mt-4 flex items-center justify-between">
                                             <span className="font-bold text-orange-600 flex items-center gap-1"><Coins size={16}/> {item.cost}</span>
-                                            <button onClick={() => handleBuy(item)} disabled={(student.balance || 0) < item.cost} className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${(student.balance || 0) >= item.cost ? 'bg-orange-600 text-white hover:bg-orange-700 shadow-orange-200 shadow-lg' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>{(student.balance || 0) >= item.cost ? 'Đổi ngay' : 'Không đủ xu'}</button>
+                                            <button onClick={() => handleRequestBuy(item, 'REWARD')} disabled={(student.balance || 0) < item.cost} className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-1 ${(student.balance || 0) >= item.cost ? 'bg-orange-600 text-white hover:bg-orange-700 shadow-orange-200 shadow-lg' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                                                <Send size={14}/> {(student.balance || 0) >= item.cost ? 'Đổi quà' : 'Không đủ xu'}
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -184,15 +175,14 @@ const GamificationPanel: React.FC<Props> = ({ student, settings, onUpdateStudent
                                 return (
                                     <div key={avatar.id} className={`bg-white rounded-xl shadow-sm border p-3 flex flex-col items-center relative ${isEquipped ? 'ring-2 ring-blue-500' : ''}`}>
                                         <div className="w-24 h-24 relative flex items-center justify-center mb-2">
-                                             {/* Show current frame to visualize better */}
                                              {student.frameUrl && <img src={student.frameUrl} className="absolute inset-0 w-full h-full z-10 scale-110 pointer-events-none opacity-50" alt="frame"/>}
                                              <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center text-5xl">{avatar.url}</div>
                                         </div>
                                         <h3 className="font-bold text-gray-800 text-sm mb-2">{avatar.label}</h3>
                                         {isOwned ? (
-                                            <button onClick={() => handleBuyAvatar(avatar)} disabled={isEquipped} className={`w-full py-1.5 rounded-lg text-xs font-bold ${isEquipped ? 'bg-green-100 text-green-700 cursor-default' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}>{isEquipped ? 'Đang dùng' : 'Trang bị'}</button>
+                                            <button onClick={() => handleEquipAvatar(avatar)} disabled={isEquipped} className={`w-full py-1.5 rounded-lg text-xs font-bold ${isEquipped ? 'bg-green-100 text-green-700 cursor-default' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}>{isEquipped ? 'Đang dùng' : 'Trang bị'}</button>
                                         ) : (
-                                            <button onClick={() => handleBuyAvatar(avatar)} disabled={(student.balance || 0) < avatar.cost} className={`w-full py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1 ${(student.balance || 0) >= avatar.cost ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-gray-200 text-gray-400'}`}><Coins size={12}/> {avatar.cost}</button>
+                                            <button onClick={() => handleRequestBuy(avatar, 'AVATAR')} disabled={(student.balance || 0) < avatar.cost} className={`w-full py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1 ${(student.balance || 0) >= avatar.cost ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-gray-200 text-gray-400'}`}><Coins size={12}/> {avatar.cost}</button>
                                         )}
                                     </div>
                                 );
@@ -220,9 +210,9 @@ const GamificationPanel: React.FC<Props> = ({ student, settings, onUpdateStudent
                                         </div>
                                         <h3 className="font-bold text-gray-800 text-sm mb-2">{frame.label}</h3>
                                         {isOwned ? (
-                                            <button onClick={() => handleBuyFrame(frame)} disabled={isEquipped} className={`w-full py-1.5 rounded-lg text-xs font-bold ${isEquipped ? 'bg-green-100 text-green-700 cursor-default' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}>{isEquipped ? 'Đang dùng' : 'Trang bị'}</button>
+                                            <button onClick={() => handleEquipFrame(frame)} disabled={isEquipped} className={`w-full py-1.5 rounded-lg text-xs font-bold ${isEquipped ? 'bg-green-100 text-green-700 cursor-default' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}>{isEquipped ? 'Đang dùng' : 'Trang bị'}</button>
                                         ) : (
-                                            <button onClick={() => handleBuyFrame(frame)} disabled={(student.balance || 0) < frame.cost} className={`w-full py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1 ${(student.balance || 0) >= frame.cost ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-gray-200 text-gray-400'}`}><Coins size={12}/> {frame.cost}</button>
+                                            <button onClick={() => handleRequestBuy(frame, 'FRAME')} disabled={(student.balance || 0) < frame.cost} className={`w-full py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1 ${(student.balance || 0) >= frame.cost ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-gray-200 text-gray-400'}`}><Coins size={12}/> {frame.cost}</button>
                                         )}
                                     </div>
                                 );

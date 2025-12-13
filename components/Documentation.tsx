@@ -127,12 +127,12 @@ const Documentation: React.FC = () => {
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-indigo-700"><Book size={24}/> Hướng dẫn sử dụng phần mềm</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                     <div className="bg-indigo-50 p-5 rounded-xl border border-indigo-200 col-span-2">
-                         <h4 className="font-bold text-lg mb-2 text-indigo-700">Mới: Avatar & Cửa hàng</h4>
+                     <div className="bg-green-50 p-5 rounded-xl border border-green-200 col-span-2">
+                         <h4 className="font-bold text-lg mb-2 text-green-700">Mới: Quỹ Lớp (Tiền Thật)</h4>
                          <ul className="list-disc list-inside text-sm space-y-2">
-                             <li><strong>Mua Avatar:</strong> Học sinh có thể dùng Xu để mua hình đại diện mới trong Cửa hàng.</li>
-                             <li><strong>Trang bị:</strong> Sau khi mua, bấm "Trang bị" để thay đổi hình đại diện hiển thị trên bảng lớp.</li>
-                             <li><strong>Cấu hình:</strong> Giáo viên có thể thêm/xóa Avatar và đặt giá tiền trong mục Cấu hình.</li>
+                             <li><strong>Giáo viên:</strong> Quản lý thu/chi trong tab "Quỹ Lớp". Có thể thu nhanh theo danh sách.</li>
+                             <li><strong>Thủ quỹ:</strong> Đăng nhập Cổng Học Sinh - chọn tab "Thu Quỹ" để báo cáo đã thu tiền của bạn nào.</li>
+                             <li><strong>Duyệt:</strong> Giáo viên vào "Hộp thư" để duyệt báo cáo của Thủ quỹ, tiền sẽ tự động cộng vào sổ quỹ.</li>
                          </ul>
                      </div>
 
@@ -162,7 +162,7 @@ const Documentation: React.FC = () => {
                 
                 <div className="bg-white border-l-4 border-indigo-500 p-4 shadow-sm mb-6">
                     <h4 className="font-bold text-indigo-700 mb-2">Tại sao cần làm bước này?</h4>
-                    <p className="text-sm">Để dữ liệu (Học sinh, Điểm, Xu, Avatar) được lưu vĩnh viễn và không bị mất khi bạn tải lại trang hoặc dùng máy khác. Dữ liệu sẽ được lưu trên Google Drive của chính bạn.</p>
+                    <p className="text-sm">Để dữ liệu (Học sinh, Điểm, Xu, Quỹ lớp) được lưu vĩnh viễn và không bị mất khi bạn tải lại trang hoặc dùng máy khác. Dữ liệu sẽ được lưu trên Google Drive của chính bạn.</p>
                 </div>
 
                 <div className="space-y-6">
@@ -177,12 +177,12 @@ const Documentation: React.FC = () => {
                     </div>
 
                     <div>
-                        <h4 className="font-bold text-gray-800 flex items-center gap-2"><span className="bg-gray-800 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">3</span> Dán mã Script</h4>
-                        <p className="text-sm ml-8 mb-2">Xóa hết mã cũ trong file <code>Code.gs</code> và dán toàn bộ đoạn mã dưới đây vào:</p>
+                        <h4 className="font-bold text-gray-800 flex items-center gap-2"><span className="bg-gray-800 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">3</span> Dán mã Script (Có cập nhật Quỹ Lớp)</h4>
+                        <p className="text-sm ml-8 mb-2">Xóa hết mã cũ trong file <code>Code.gs</code> và dán toàn bộ đoạn mã dưới đây vào. <span className="text-red-600 font-bold">Lưu ý: Phải cập nhật Deployment mới sau khi sửa code!</span></p>
                         <div className="ml-8 relative">
                              <pre className="bg-gray-800 text-gray-100 p-3 rounded text-xs overflow-x-auto font-mono whitespace-pre-wrap select-all max-h-60 overflow-y-auto">
 {`function doGet(e) {
-  return ContentService.createTextOutput("Smart Classroom API v2.2.2 is running.");
+  return ContentService.createTextOutput("Smart Classroom API v3.0.0 (Funds Supported) is running.");
 }
 
 function doPost(e) {
@@ -213,6 +213,12 @@ function doPost(e) {
          var aRows = data.attendance.map(a => [a.id, a.studentId, a.date, JSON.stringify(a)]);
          aSheet.getRange(1, 1, aRows.length, 4).setValues(aRows);
       }
+
+      var fSheet = getSheet(sheet, 'Funds'); fSheet.clear();
+      if (data.funds && data.funds.length > 0) {
+         var fRows = data.funds.map(f => [f.id, f.date, f.type, f.amount, JSON.stringify(f)]);
+         fSheet.getRange(1, 1, fRows.length, 5).setValues(fRows);
+      }
       
       var cfgSheet = getSheet(sheet, 'Config'); cfgSheet.clear();
       var configRows = [
@@ -231,13 +237,10 @@ function doPost(e) {
       
       var sSheet = sheet.getSheetByName('Students');
       if (sSheet && sSheet.getLastRow() > 0) {
-         // Load from JSON column (Col 3)
          var rows = sSheet.getRange(1, 1, sSheet.getLastRow(), 3).getValues();
          result.students = rows.map(r => {
              try { return JSON.parse(r[2]); } 
-             catch(e) { 
-                 return {id: r[0], name: r[1], gender: 'Nam', rank: 'Đạt', isTalkative: false}; 
-             }
+             catch(e) { return {id: r[0], name: r[1], gender: 'Nam', rank: 'Đạt'}; }
          });
       }
       
@@ -251,6 +254,12 @@ function doPost(e) {
       if (aSheet && aSheet.getLastRow() > 0) {
          var rows = aSheet.getRange(1, 1, aSheet.getLastRow(), 4).getValues();
          result.attendance = rows.map(r => JSON.parse(r[3]));
+      }
+
+      var fSheet = sheet.getSheetByName('Funds');
+      if (fSheet && fSheet.getLastRow() > 0) {
+         var rows = fSheet.getRange(1, 1, fSheet.getLastRow(), 5).getValues();
+         result.funds = rows.map(r => JSON.parse(r[4]));
       }
       
       var cfgSheet = sheet.getSheetByName('Config');
@@ -343,10 +352,10 @@ function response(data) {
                         <ol className="list-decimal ml-10 text-sm space-y-1">
                             <li>Bấm nút <strong>Deploy (Triển khai)</strong> màu xanh góc trên bên phải &rarr; chọn <strong>New deployment (Bài triển khai mới)</strong>.</li>
                             <li>Bấm biểu tượng bánh răng chọn <strong>Web app</strong>.</li>
-                            <li><strong>Description:</strong> Nhập gì cũng được (vd: v1).</li>
+                            <li><strong>Description:</strong> Nhập version mới (vd: v3).</li>
                             <li><strong>Execute as (Thực thi dưới dạng):</strong> Chọn <em>"Me (Chính tôi)"</em>.</li>
                             <li><strong>Who has access (Ai có quyền truy cập):</strong> <span className="text-red-600 font-bold">Bắt buộc chọn "Anyone (Bất kỳ ai)"</span>.</li>
-                            <li>Bấm <strong>Deploy</strong>. Cấp quyền truy cập nếu được hỏi (Chọn Advanced &rarr; Go to ... (unsafe)).</li>
+                            <li>Bấm <strong>Deploy</strong>.</li>
                             <li>Copy <strong>Web App URL</strong> (có đuôi <code>/exec</code>).</li>
                         </ol>
                     </div>
@@ -363,6 +372,17 @@ function response(data) {
             <div className="max-w-3xl">
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-indigo-700"><History size={24}/> Lịch sử Cập nhật</h3>
                 <div className="relative border-l-2 border-indigo-200 ml-3 space-y-8 pl-6 py-2">
+                     {/* v3.0 */}
+                     <div className="relative">
+                        <span className="absolute -left-[33px] bg-green-600 text-white rounded-full p-1.5 ring-4 ring-green-50"><Smile size={16}/></span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 3.0 (Mới nhất)</h4>
+                        <span className="text-xs text-gray-500 font-mono">Quỹ Lớp & Mobile App</span>
+                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
+                            <li><strong>Sổ Quỹ:</strong> Quản lý tiền thật, tự động tạo phiếu thu khi duyệt báo cáo của Thủ quỹ.</li>
+                            <li><strong>Nhập liệu nhóm:</strong> Thêm tính năng nhập liệu nhanh cho nhiều học sinh cùng lúc.</li>
+                            <li><strong>Tối ưu Mobile:</strong> Giao diện học sinh được thiết kế lại để dễ thao tác trên điện thoại.</li>
+                        </ul>
+                    </div>
                      {/* v2.4 */}
                      <div className="relative">
                         <span className="absolute -left-[33px] bg-purple-600 text-white rounded-full p-1.5 ring-4 ring-purple-50"><UserCheck size={16}/></span>
@@ -372,28 +392,6 @@ function response(data) {
                             <li><strong>Danh hiệu mới:</strong> Cập nhật hệ thống huy hiệu vui nhộn (Loa Phường, Giáo Sư...).</li>
                             <li><strong>Gán thủ công:</strong> Giáo viên có thể tặng/thu hồi danh hiệu thủ công trong Shop.</li>
                             <li><strong>Xuất báo cáo:</strong> Cho phép tải ảnh báo cáo chi tiết của từng học sinh riêng biệt.</li>
-                            <li><strong>Hiển thị Avatar:</strong> Thêm Avatar vào bảng nhập liệu hàng tuần.</li>
-                        </ul>
-                    </div>
-                     {/* v2.3 */}
-                     <div className="relative">
-                        <span className="absolute -left-[33px] bg-blue-600 text-white rounded-full p-1.5 ring-4 ring-blue-50"><Smile size={16}/></span>
-                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 2.3</h4>
-                        <span className="text-xs text-gray-500 font-mono">Avatar & Cá nhân hóa</span>
-                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
-                            <li><strong>Hệ thống Avatar:</strong> Thêm chức năng mua, trang bị hình đại diện cho học sinh.</li>
-                            <li><strong>Hiển thị:</strong> Avatar hiển thị trực quan trong danh sách lớp và bảng vinh danh.</li>
-                            <li><strong>Cấu hình:</strong> Giáo viên có thể thêm/xóa/sửa giá các Avatar trong Settings.</li>
-                        </ul>
-                    </div>
-                     {/* v2.2 */}
-                     <div className="relative">
-                        <span className="absolute -left-[33px] bg-green-600 text-white rounded-full p-1.5 ring-4 ring-green-50"><GitCommit size={16}/></span>
-                        <h4 className="font-bold text-lg text-gray-600">Phiên bản 2.2</h4>
-                        <span className="text-xs text-gray-500 font-mono">Đồng bộ Dữ liệu</span>
-                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
-                            <li><strong>Sửa lỗi Đồng bộ:</strong> Cập nhật mã Script để lưu trữ đầy đủ thông tin Xu, Túi đồ và Huy hiệu.</li>
-                            <li><strong>Hiển thị Xu:</strong> Thêm hiển thị số dư Xu ngay trong bảng nhập liệu.</li>
                         </ul>
                     </div>
                 </div>

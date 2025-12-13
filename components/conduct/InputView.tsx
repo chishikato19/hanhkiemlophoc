@@ -1,8 +1,10 @@
 
-import React from 'react';
-import { Calendar, Lock, Unlock, Star, ThumbsDown, CheckSquare, Coins, Trash2, Eraser, RotateCcw } from 'lucide-react';
+import React, { useState } from 'react';
+import { Calendar, Lock, Unlock, CheckSquare, Coins, Trash2, Eraser, RotateCcw, Zap } from 'lucide-react';
 import { Student, ConductRecord, Settings, AcademicRank } from '../../types';
 import TagSelector from '../shared/TagSelector';
+import BatchInputModal from './BatchInputModal';
+import { addLog } from '../../utils/logger';
 
 interface Props {
     students: Student[];
@@ -13,8 +15,8 @@ interface Props {
     isLocked: boolean;
     toggleLockWeek: () => void;
     getWeekLabel: (w: number) => string;
-    handleClassBonus: () => void;
-    handleClassPenalty: () => void;
+    handleClassBonus: () => void; 
+    handleClassPenalty: () => void; 
     handleFillDefault: () => void;
     handleCalculateCoinsForWeek: () => void;
     handleUndoCoinsForWeek: () => void;
@@ -26,18 +28,32 @@ interface Props {
     setSelectedStudentForDetail: (s: Student) => void;
     getRankFromScore: (s: number) => AcademicRank;
     getRankColor: (r: string) => string;
+    // NEW PROP
+    handleBatchApply: (studentIds: string[], behaviorLabel: string, points: number, note: string, isPositive: boolean) => void;
 }
 
 const InputView: React.FC<Props> = ({
     students, records, settings, selectedWeek, setSelectedWeek, isLocked, toggleLockWeek, getWeekLabel,
-    handleClassBonus, handleClassPenalty, handleFillDefault, handleCalculateCoinsForWeek, handleUndoCoinsForWeek,
+    handleFillDefault, handleCalculateCoinsForWeek, handleUndoCoinsForWeek,
     handleClearAllWeekData, handleScoreChange, handleTagChange, handleNoteChange, handleClearStudentData, setSelectedStudentForDetail,
-    getRankFromScore, getRankColor
+    getRankFromScore, getRankColor, handleBatchApply
 }) => {
     const activeStudents = students.filter(s => s.isActive !== false);
+    const [showBatchModal, setShowBatchModal] = useState(false);
 
     return (
         <div className="bg-white rounded-xl shadow overflow-hidden flex flex-col h-[calc(100vh-180px)]">
+             {showBatchModal && (
+                 <BatchInputModal 
+                    students={activeStudents} 
+                    settings={settings}
+                    onClose={() => setShowBatchModal(false)}
+                    onApply={(ids, label, points, note, isPositive) => {
+                        handleBatchApply(ids, label, points, note, isPositive);
+                    }}
+                 />
+             )}
+
              <div className="p-4 border-b bg-gray-50 flex flex-wrap gap-4 items-center justify-between sticky top-0 z-10">
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
@@ -51,7 +67,6 @@ const InputView: React.FC<Props> = ({
                     </button>
                 </div>
 
-                {/* Coin Controls - Visible Always, but styling changes based on Lock status */}
                 <div className="flex gap-1 border-l border-r border-gray-300 px-2 mx-1">
                         <button 
                             onClick={handleCalculateCoinsForWeek} 
@@ -73,11 +88,16 @@ const InputView: React.FC<Props> = ({
                         </button>
                 </div>
 
-                {/* Bulk Edit Controls - Only visible when Unlocked */}
                 {!isLocked && (
                     <div className="flex gap-2">
-                        <button onClick={handleClassBonus} className="flex items-center gap-2 text-sm bg-blue-100 text-blue-700 px-3 py-1.5 rounded hover:bg-blue-200 font-medium"><Star size={16}/> Cộng cả lớp</button>
-                        <button onClick={handleClassPenalty} className="flex items-center gap-2 text-sm bg-red-100 text-red-700 px-3 py-1.5 rounded hover:bg-red-200 font-medium"><ThumbsDown size={16}/> Trừ cả lớp</button>
+                        {/* New Batch Input Button */}
+                        <button 
+                            onClick={() => setShowBatchModal(true)} 
+                            className="flex items-center gap-2 text-sm bg-indigo-600 text-white px-4 py-1.5 rounded hover:bg-indigo-700 font-bold shadow-sm animate-pulse hover:animate-none"
+                        >
+                            <Zap size={16} fill="currentColor" /> Nhập nhanh / Theo nhóm
+                        </button>
+
                         <button onClick={handleFillDefault} className="flex items-center gap-2 text-sm bg-green-100 text-green-700 px-3 py-1.5 rounded hover:bg-green-200 font-medium"><CheckSquare size={16}/> Điền mặc định</button>
                         <button onClick={handleClearAllWeekData} className="flex items-center gap-2 text-sm bg-gray-100 text-red-600 border border-red-200 px-3 py-1.5 rounded hover:bg-red-50 font-medium"><Trash2 size={16}/> Xóa Tuần</button>
                     </div>
@@ -85,7 +105,6 @@ const InputView: React.FC<Props> = ({
              </div>
 
              <div className="flex-1 overflow-auto relative">
-                {/* Overlay only blocks inputs, not the whole table, so we can still see data */}
                 {isLocked && <div className="absolute inset-0 z-0 bg-gray-50 bg-opacity-10 pointer-events-none"></div>}
                 
                 <table className="w-full text-left text-sm border-collapse">
@@ -122,7 +141,6 @@ const InputView: React.FC<Props> = ({
                                             <span>{s.name}</span>
                                         </button>
                                         <div className="flex gap-1 mt-1 flex-wrap ml-11">
-                                            {/* Coin Badge */}
                                             <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded flex items-center gap-0.5 border border-yellow-200 font-bold" title="Số dư xu">
                                                 <Coins size={10}/> {s.balance || 0}
                                             </span>

@@ -54,18 +54,13 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   
   const calculateAllGamification = (currentStudents: Student[] = students) => {
       const updatedStudents = currentStudents.map(student => {
-          // Check badges now returns the FULL authorized list (handling revocations)
           const finalBadges = checkBadges(student, records, settings);
-          
-          // Determine if changes occurred
           const oldBadges = student.badges || [];
           const hasChanged = finalBadges.length !== oldBadges.length || !finalBadges.every(b => oldBadges.includes(b));
           
           if (hasChanged) {
-               // If displayed badges include ones we just lost, clean them up
                let newDisplayed = student.displayedBadges || [];
                newDisplayed = newDisplayed.filter(id => finalBadges.includes(id));
-
                return { ...student, badges: finalBadges, displayedBadges: newDisplayed };
           }
           return student;
@@ -125,6 +120,51 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
     setHasUnsavedChanges(true);
   };
 
+  const handleBatchApply = (studentIds: string[], behaviorLabel: string, points: number, note: string, isPositive: boolean) => {
+      if (isLocked) return;
+      
+      const newRecords = [...records];
+      const fullLabel = `${behaviorLabel} (${points > 0 ? '+' : ''}${points}đ)`;
+      
+      studentIds.forEach(id => {
+          const idx = newRecords.findIndex(r => r.studentId === id && r.week === selectedWeek);
+          
+          if (idx > -1) {
+              const rec = newRecords[idx];
+              let newScore = rec.score + points;
+              newScore = Math.max(0, Math.min(100, newScore));
+              
+              const updates: any = { score: newScore };
+              if (isPositive) {
+                  updates.positiveBehaviors = [...(rec.positiveBehaviors || []), fullLabel];
+              } else {
+                  updates.violations = [...rec.violations, fullLabel];
+              }
+              if (note) {
+                  updates.note = rec.note ? `${rec.note}. ${note}` : note;
+              }
+              newRecords[idx] = { ...rec, ...updates };
+          } else {
+              // Create new record
+              const initialScore = Math.max(0, Math.min(100, settings.defaultScore + points));
+              newRecords.push({
+                  id: `CON-${id}-W${selectedWeek}`,
+                  studentId: id,
+                  week: selectedWeek,
+                  score: initialScore,
+                  violations: isPositive ? [] : [fullLabel],
+                  positiveBehaviors: isPositive ? [fullLabel] : [],
+                  note: note || ''
+              });
+          }
+      });
+
+      setRecords(newRecords);
+      saveConductRecords(newRecords);
+      setHasUnsavedChanges(true);
+      addLog('BATCH', `Đã áp dụng "${behaviorLabel}" cho ${studentIds.length} học sinh.`);
+  };
+
   const handleTagChange = (studentId: string, week: number, label: string, points: number, delta: number, isPositive: boolean) => {
       if (isLocked) return;
       const rec = records.find(r => r.studentId === studentId && r.week === week);
@@ -169,8 +209,6 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
       let totalCoins = 0;
       const summary: string[] = [];
 
-      // Create new array reference for students
-      // We calculate the NEW state here
       const newStudents = students.map(s => {
           if (!s.isActive) return s;
 
@@ -186,11 +224,9 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
           return { ...s, balance: currentBalance + earned };
       });
 
-      // Update Processed Weeks
       const newProcessed = [...(settings.processedWeeks || []), weekKey];
       updateSettings({ processedWeeks: newProcessed });
 
-      // Pass the 'newStudents' to badge calc
       calculateAllGamification(newStudents); 
       
       const summaryText = summary.length > 0 ? summary.slice(0, 10).join('\n') + (summary.length > 10 ? `\n... và ${summary.length - 10} người khác.` : '') : 'Không ai nhận được xu.';
@@ -243,8 +279,8 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
     updateSettings({ lockedWeeks: newLocked });
   };
   
-  const handleClassBonus = () => { const reason = prompt("Lý do thưởng cả lớp:"); if (!reason) return; const points = parseInt(prompt("Số điểm cộng:", "2") || "0"); if (!points) return; const newRecords = [...records]; activeStudents.forEach(s => { const idx = newRecords.findIndex(r => r.studentId === s.id && r.week === selectedWeek); const label = `${reason} (+${points}đ)`; if (idx > -1) { const r = newRecords[idx]; newRecords[idx] = { ...r, score: Math.min(100, r.score + points), positiveBehaviors: [...(r.positiveBehaviors || []), label] }; } else { newRecords.push({ id: `CON-${s.id}-W${selectedWeek}`, studentId: s.id, week: selectedWeek, score: settings.defaultScore + points, violations: [], positiveBehaviors: [label], note: '' }); } }); setRecords(newRecords); saveConductRecords(newRecords); setHasUnsavedChanges(true); addLog('BATCH', `Đã cộng ${points}đ cho cả lớp: ${reason}`); };
-  const handleClassPenalty = () => { const reason = prompt("Lý do trừ cả lớp:"); if (!reason) return; const points = parseInt(prompt("Số điểm trừ:", "2") || "0"); if (!points) return; const newRecords = [...records]; activeStudents.forEach(s => { const idx = newRecords.findIndex(r => r.studentId === s.id && r.week === selectedWeek); const label = `${reason} (-${points}đ)`; if (idx > -1) { const r = newRecords[idx]; newRecords[idx] = { ...r, score: Math.max(0, r.score - points), violations: [...r.violations, label] }; } else { newRecords.push({ id: `CON-${s.id}-W${selectedWeek}`, studentId: s.id, week: selectedWeek, score: settings.defaultScore - points, violations: [label], positiveBehaviors: [], note: '' }); } }); setRecords(newRecords); saveConductRecords(newRecords); setHasUnsavedChanges(true); addLog('BATCH', `Đã trừ ${points}đ cả lớp: ${reason}`); };
+  const handleClassBonus = () => {}; 
+  const handleClassPenalty = () => {}; 
   const handleFillDefault = () => { if (!window.confirm("Tự động điền điểm mặc định?")) return; const newRecords = [...records]; let count = 0; activeStudents.forEach(s => { const exists = newRecords.find(r => r.studentId === s.id && r.week === selectedWeek); if (!exists) { newRecords.push({ id: `CON-${s.id}-W${selectedWeek}`, studentId: s.id, week: selectedWeek, score: settings.defaultScore, violations: [], positiveBehaviors: [] }); count++; } }); if (count > 0) { setRecords(newRecords); saveConductRecords(newRecords); setHasUnsavedChanges(true); addLog('BATCH', `Đã điền mặc định cho ${count} học sinh.`); } };
   const handleClearAllWeekData = () => { if (confirm(`Xóa toàn bộ dữ liệu Tuần ${selectedWeek}?`)) { const newRecords = records.filter(r => r.week !== selectedWeek); setRecords(newRecords); saveConductRecords(newRecords); setHasUnsavedChanges(true); addLog('BATCH', `Đã xóa dữ liệu Tuần ${selectedWeek}`); } };
 
@@ -305,6 +341,7 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
              handleTagChange={handleTagChange} handleNoteChange={handleNoteChange} handleClearStudentData={handleClearStudentData}
              setSelectedStudentForDetail={setSelectedStudentForDetail}
              getRankFromScore={getRankFromScore} getRankColor={getRankColor}
+             handleBatchApply={handleBatchApply}
           />
       )}
 
