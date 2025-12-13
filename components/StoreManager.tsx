@@ -2,17 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import { Student, Settings } from '../types';
 import { getStudents, getSettings, saveStudents, getConductRecords, saveSettings, saveConductRecords } from '../services/dataService';
-import { Coins, Search, ShoppingBag, Gift, Settings as SettingsIcon } from 'lucide-react';
+import { Coins, Search, ShoppingBag, Gift } from 'lucide-react';
 import GamificationPanel from './GamificationPanel';
 import { checkBadges } from '../utils/gamification';
-import SettingsModal from './conduct/SettingsModal';
 
 const StoreManager: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [settings, setSettings] = useState<Settings>(getSettings());
   const [search, setSearch] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
   
   const [records, setRecords] = useState(getConductRecords());
 
@@ -35,40 +33,9 @@ const StoreManager: React.FC = () => {
           setSelectedStudent(updatedStudent);
       }
   };
-  
-  const handleUpdateSettings = (partialSettings: any) => {
-      const newSettings = { ...settings, ...partialSettings };
-      setSettings(newSettings);
-      saveSettings(newSettings);
-  };
-  
-  const recalculateAllScores = (newSettings: Settings) => {
-      const currentRecords = records;
-      const finalRecs = currentRecords.map(rec => {
-          let score = newSettings.defaultScore;
-          rec.violations.forEach(v => {
-              const item = newSettings.behaviorConfig.violations.find(i => i.label === v);
-              if (item) score += item.points;
-              else { const match = v.match(/\(([+-]?\d+)đ\)/); if (match && match[1]) score += parseInt(match[1]); }
-          });
-          (rec.positiveBehaviors || []).forEach(p => {
-               const item = newSettings.behaviorConfig.positives.find(i => i.label === p);
-               if (item) score += item.points;
-               else { const match = p.match(/\(([+-]?\d+)đ\)/); if (match && match[1]) score += parseInt(match[1]); }
-          });
-          return { ...rec, score: Math.max(0, Math.min(100, score)) };
-      });
-      setRecords(finalRecs);
-      saveConductRecords(finalRecs);
-  };
-  
-  const migrateBehaviorName = (oldName: string, newName: string, isPositive: boolean) => {
-      // Mock implementation for Store usage, mainly passed to satisfy type check if SettingsModal is reused
-  };
 
   const handleOpenShop = (student: Student) => {
       // Refresh badges when opening shop
-      // NOTE: checkBadges now handles removals/revocations too.
       const currentStudentData = students.find(s => s.id === student.id) || student;
       const finalBadges = checkBadges(currentStudentData, records, settings);
       
@@ -96,16 +63,6 @@ const StoreManager: React.FC = () => {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-       {showSettings && (
-           <SettingsModal 
-                settings={settings} 
-                updateSettings={handleUpdateSettings} 
-                onClose={() => setShowSettings(false)}
-                recalculateAllScores={recalculateAllScores}
-                migrateBehaviorName={migrateBehaviorName}
-            />
-       )}
-       
        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <div>
                  <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><ShoppingBag className="text-orange-600"/> Cửa Hàng & Đổi Quà</h2>
@@ -122,9 +79,6 @@ const StoreManager: React.FC = () => {
                         onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
-                <button onClick={() => setShowSettings(true)} className="bg-white border text-gray-700 px-3 py-2 rounded-full hover:bg-gray-100 flex items-center gap-2 shadow-sm font-medium">
-                    <SettingsIcon size={18}/> Cấu hình Shop
-                </button>
             </div>
        </div>
 
