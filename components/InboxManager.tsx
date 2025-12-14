@@ -82,8 +82,13 @@ const InboxManager: React.FC = () => {
             saveAttendance([...allAttendance, newAttRecord]);
             addLog('INBOX', `Đã duyệt điểm danh: ${student.name} - ${report.content}`);
 
+            // Cập nhật cả bên Hạnh kiểm để hiển thị trong báo cáo lỗi
             if (report.content === AttendanceStatus.UNEXCUSED || report.content === AttendanceStatus.LATE) {
+                // Trừ điểm bình thường
                 applyViolation(student, reportWeek, report.content, report.note);
+            } else if (report.content === AttendanceStatus.EXCUSED) {
+                // Vắng có phép: Ghi nhận nhưng KHÔNG trừ điểm (points = 0)
+                applyViolation(student, reportWeek, "Vắng có phép", report.note, 0);
             }
         } 
         // 2. Handle BONUS (Coins)
@@ -151,23 +156,31 @@ const InboxManager: React.FC = () => {
         savePendingReports(updated);
     };
 
-    const applyViolation = (student: Student, week: number, violationName: string, note?: string) => {
+    const applyViolation = (student: Student, week: number, violationName: string, note?: string, explicitPoints?: number) => {
         const allConduct = getConductRecords();
         const existingIdx = allConduct.findIndex(r => r.studentId === student.id && r.week === week);
         
         let pointsToDeduct = 0;
-        let vioConfig = settings.behaviorConfig.violations.find(v => v.label.toLowerCase() === violationName.toLowerCase());
         
-        if (!vioConfig) {
-             if (violationName === AttendanceStatus.UNEXCUSED) vioConfig = settings.behaviorConfig.violations.find(v => v.label === 'Vắng không phép');
-             if (violationName === AttendanceStatus.LATE) vioConfig = settings.behaviorConfig.violations.find(v => v.label === 'Đi muộn');
+        // Nếu có điểm chỉ định (ví dụ 0 cho Vắng có phép), dùng luôn
+        if (explicitPoints !== undefined) {
+            pointsToDeduct = explicitPoints;
+        } else {
+            // Tự động tra cứu trong cấu hình
+            let vioConfig = settings.behaviorConfig.violations.find(v => v.label.toLowerCase() === violationName.toLowerCase());
+            
+            if (!vioConfig) {
+                 if (violationName === AttendanceStatus.UNEXCUSED) vioConfig = settings.behaviorConfig.violations.find(v => v.label === 'Vắng không phép');
+                 if (violationName === AttendanceStatus.LATE) vioConfig = settings.behaviorConfig.violations.find(v => v.label === 'Đi muộn');
+            }
+
+            if (vioConfig) pointsToDeduct = Math.abs(vioConfig.points);
+            else pointsToDeduct = 2; // Mặc định trừ 2 điểm nếu không tìm thấy cấu hình
         }
 
-        if (vioConfig) pointsToDeduct = Math.abs(vioConfig.points);
-        else pointsToDeduct = 2; 
-
         const labelWithNote = note ? `${violationName} (${note})` : violationName;
-        const finalLabel = `${labelWithNote} (-${pointsToDeduct}đ)`;
+        // Hiển thị điểm trừ (nếu > 0) hoặc (0đ)
+        const finalLabel = pointsToDeduct > 0 ? `${labelWithNote} (-${pointsToDeduct}đ)` : `${labelWithNote} (0đ)`;
 
         let newRecords = [...allConduct];
         if (existingIdx > -1) {
