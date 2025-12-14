@@ -149,7 +149,7 @@ const Documentation: React.FC = () => {
                          <h4 className="font-bold text-lg mb-2 text-green-700">Mới: Quỹ Lớp (Tiền Thật)</h4>
                          <ul className="list-disc list-inside text-sm space-y-2">
                              <li><strong>Giáo viên:</strong> Quản lý thu/chi trong tab "Quỹ Lớp". Có thể thu nhanh theo danh sách.</li>
-                             <li><strong>Thủ quỹ:</strong> Đăng nhập Cổng Học Sinh -> chọn tab "Thu Quỹ" để báo cáo đã thu tiền của bạn nào.</li>
+                             <li><strong>Thủ quỹ:</strong> Đăng nhập Cổng Học Sinh - chọn tab "Thu Quỹ" để báo cáo đã thu tiền của bạn nào.</li>
                              <li><strong>Duyệt:</strong> Giáo viên vào "Hộp thư" để duyệt báo cáo của Thủ quỹ, tiền sẽ tự động cộng vào sổ quỹ.</li>
                          </ul>
                      </div>
