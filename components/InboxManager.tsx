@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { PendingReport, AttendanceStatus, AttendanceRecord, ConductRecord, Student, Settings, PendingOrder, FundTransaction } from '../types';
 import { getPendingReports, savePendingReports, getStudents, saveStudents, getAttendance, saveAttendance, getConductRecords, saveConductRecords, getSettings, fetchPendingReportsCloud, getPendingOrders, savePendingOrders, getFundTransactions, saveFundTransactions } from '../services/dataService';
-import { Check, X, Inbox, Clock, AlertTriangle, RefreshCw, Calendar, CheckCircle, XCircle, ShoppingBag, Coins, Shield, Award, Banknote } from 'lucide-react';
+import { Check, X, Inbox, Clock, AlertTriangle, RefreshCw, Calendar, CheckCircle, XCircle, ShoppingBag, Coins, Shield, Award, Banknote, TrendingDown } from 'lucide-react';
 import { addLog } from '../utils/logger';
 import { processOrder } from '../utils/gamification';
 import { formatCurrency } from '../utils/formatters';
@@ -123,19 +123,21 @@ const InboxManager: React.FC = () => {
         // 3. Handle FUND (Money)
         else if (report.type === 'FUND') {
             const amount = report.fundAmount || 0;
+            const isExpense = report.content.startsWith('Chi:') || report.content.startsWith('Chi tiêu:');
+            
             const newTrans: FundTransaction = {
                 id: `FT-${Date.now()}`,
                 date: reportDate,
-                type: 'IN',
+                type: isExpense ? 'OUT' : 'IN',
                 amount: amount,
-                category: 'Thu quỹ (Thủ quỹ báo)',
-                description: `${report.note || 'Thu tiền'} - ${student.name}`,
-                relatedStudentIds: [student.id],
+                category: isExpense ? 'Chi tiêu (Thủ quỹ)' : 'Thu quỹ (Thủ quỹ báo)',
+                description: `${report.note || report.content} - ${report.reporterName}`,
+                relatedStudentIds: isExpense ? [] : [student.id],
                 pic: report.reporterName
             };
             const currentFunds = getFundTransactions();
             saveFundTransactions([newTrans, ...currentFunds]);
-            addLog('INBOX', `Đã duyệt thu quỹ: ${student.name} - ${formatCurrency(amount)}`);
+            addLog('INBOX', `Đã duyệt ${isExpense ? 'CHI' : 'THU'} quỹ: ${formatCurrency(amount)}`);
         }
         // 4. Handle VIOLATION
         else {
@@ -222,9 +224,10 @@ const InboxManager: React.FC = () => {
         const hasImmunity = student?.inventory?.some(i => settings.gamification.rewards.find(r => r.id === i.itemId)?.type === 'IMMUNITY');
         const isBonus = report.type === 'BONUS';
         const isFund = report.type === 'FUND';
+        const isExpense = isFund && (report.content.startsWith('Chi:') || report.content.startsWith('Chi tiêu:'));
 
         return (
-            <div key={report.id} className={`border rounded-lg p-4 flex flex-col md:flex-row gap-4 items-start md:items-center hover:shadow-md transition-shadow ${isBonus ? 'bg-yellow-50 border-yellow-200' : isFund ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-indigo-100'}`}>
+            <div key={report.id} className={`border rounded-lg p-4 flex flex-col md:flex-row gap-4 items-start md:items-center hover:shadow-md transition-shadow ${isBonus ? 'bg-yellow-50 border-yellow-200' : isFund ? (isExpense ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200') : 'bg-gray-50 border-indigo-100'}`}>
                 <div className="flex-1">
                     <div className="flex items-center gap-3 text-xs text-gray-500 mb-1">
                         <span className="flex items-center gap-1 bg-white border px-1.5 rounded"><Calendar size={10}/> Tuần {report.week || '?'}</span>
@@ -244,8 +247,8 @@ const InboxManager: React.FC = () => {
                                 <Award size={14}/> {report.content}
                             </span>
                         ) : report.type === 'FUND' ? (
-                            <span className="text-sm font-bold px-2 py-0.5 rounded bg-green-100 text-green-700 flex items-center gap-1 border border-green-200">
-                                <Banknote size={14}/> {report.content}
+                            <span className={`text-sm font-bold px-2 py-0.5 rounded flex items-center gap-1 border ${isExpense ? 'bg-red-100 text-red-700 border-red-200' : 'bg-green-100 text-green-700 border-green-200'}`}>
+                                {isExpense ? <TrendingDown size={14}/> : <Banknote size={14}/>} {report.content} {report.fundAmount ? `(${formatCurrency(report.fundAmount)})` : ''}
                             </span>
                         ) : (
                             <span className="text-sm font-bold px-2 py-0.5 rounded bg-orange-100 text-orange-700 flex items-center gap-1">

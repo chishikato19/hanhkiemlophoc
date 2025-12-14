@@ -62,7 +62,8 @@ const defaultSettings: Settings = {
       { id: 'v8', label: 'Vô lễ với giáo viên', points: -20, category: 'DISCIPLINE' },
       { id: 'v9', label: 'Vắng không phép', points: -5, category: 'DISCIPLINE' },
       { id: 'v10', label: 'Trực nhật bẩn', points: -3, category: 'LABOR' },
-      { id: 'v11', label: 'Xả rác', points: -2, category: 'LABOR' }
+      { id: 'v11', label: 'Xả rác', points: -2, category: 'LABOR' },
+      { id: 'v12', label: 'Vứt rác bừa bãi', points: -5, category: 'LABOR' }
     ],
     positives: [
       { id: 'p1', label: 'Phát biểu xây dựng bài', points: 1, category: 'STUDY' },
