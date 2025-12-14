@@ -11,13 +11,42 @@ import LoginGate from './components/LoginGate';
 import StudentPortal from './components/StudentPortal';
 import InboxManager from './components/InboxManager';
 import SettingsManager from './components/SettingsManager';
-import { getSettings } from './services/dataService';
+import { getSettings, saveGasUrl } from './services/dataService';
 
 const App: React.FC = () => {
   const [role, setRole] = useState<'teacher' | 'student' | null>(null);
   const [currentTab, setCurrentTab] = useState('students');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const settings = getSettings();
+
+  // 1. Auto-configure via URL Link (Student Connection Flow)
+  useEffect(() => {
+      const params = new URLSearchParams(window.location.search);
+      const encodedGasUrl = params.get('classId');
+
+      if (encodedGasUrl) {
+          try {
+              // Decode base64
+              const decodedUrl = atob(encodedGasUrl);
+              
+              // Basic validation to check if it looks like a GAS URL
+              if (decodedUrl.includes('script.google.com')) {
+                  saveGasUrl(decodedUrl);
+                  alert("✅ Đã kết nối với lớp học thành công!\nBạn có thể đăng nhập ngay bây giờ.");
+                  
+                  // Clean URL to prevent re-triggering
+                  window.history.replaceState({}, document.title, window.location.pathname);
+                  
+                  // Optional: Reload to ensure fresh state if needed, though mostly not required
+                  // window.location.reload(); 
+              } else {
+                  console.error("Invalid Class ID Format");
+              }
+          } catch (e) {
+              console.error("Failed to decode Class ID", e);
+          }
+      }
+  }, []);
 
   // Warn on page reload/close
   useEffect(() => {
