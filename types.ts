@@ -80,6 +80,17 @@ export interface PendingReport {
   fundAmount?: number; // Real money amount
 }
 
+// NEW: Fund Campaign (Created by Treasurer)
+export interface FundCampaign {
+    id: string;
+    name: string; // e.g. "Kế hoạch nhỏ Đợt 1"
+    amountType: 'FIXED' | 'VARIABLE';
+    amountPerStudent?: number; // if FIXED
+    startDate: string;
+    description?: string;
+    isClosed: boolean;
+}
+
 // NEW: Fund Transaction (Real Money)
 export interface FundTransaction {
   id: string;
@@ -90,6 +101,7 @@ export interface FundTransaction {
   description: string;
   relatedStudentIds?: string[]; // Danh sách HS đã đóng (nếu thu theo đợt)
   pic?: string; // Người phụ trách (Giáo viên hoặc Tên thủ quỹ)
+  campaignId?: string; // Linked to a campaign
 }
 
 export interface PendingOrder {
@@ -112,6 +124,14 @@ export interface StudentRole {
   assignedStudentIds: string[];
 }
 
+// NEW: Duty Roster Types
+export interface DutyTask {
+    dayOfWeek: number; // 2 (Mon) -> 7 (Sat)
+    morning: string[]; // List of Student IDs
+    board: string[];
+    afternoon: string[];
+}
+
 export type BehaviorCategory = 'STUDY' | 'DISCIPLINE' | 'LABOR' | 'OTHER';
 
 export interface BehaviorItem {
@@ -119,6 +139,11 @@ export interface BehaviorItem {
   label: string;
   points: number;
   category?: BehaviorCategory;
+}
+
+export interface BehaviorConfig {
+    violations: BehaviorItem[];
+    positives: BehaviorItem[];
 }
 
 export interface BadgeConfig {

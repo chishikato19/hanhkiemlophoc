@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getLogs, clearLogs } from '../utils/logger';
 import { LogEntry } from '../types';
 import { seedData, getGasUrl, saveGasUrl, exportFullData, importFullData } from '../services/dataService';
-import { Bug, Database, Book, History, GitCommit, Download, Upload, Cloud, Save, Copy, Smile, UserCheck, Check } from 'lucide-react';
+import { Bug, Database, Book, History, GitCommit, Download, Upload, Cloud, Save, Copy, Smile, UserCheck, Check, Link, Share2, BarChart2 } from 'lucide-react';
 
 const Documentation: React.FC = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -12,6 +12,7 @@ const Documentation: React.FC = () => {
   // GAS URL State
   const [gasUrl, setGasUrl] = useState('');
   const [isSaved, setIsSaved] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState('');
 
   // File Upload Ref
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -24,9 +25,26 @@ const Documentation: React.FC = () => {
   }, []);
 
   const handleSaveUrl = () => {
+      if (!gasUrl.trim()) return;
       saveGasUrl(gasUrl.trim());
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 2000);
+  };
+
+  const handleGenerateLink = () => {
+      if (!gasUrl.trim()) {
+          alert("Bạn chưa nhập URL Google Sheet!");
+          return;
+      }
+      // Base64 encode the URL to make it a single parameter
+      const encoded = btoa(gasUrl.trim());
+      const link = `${window.location.origin}${window.location.pathname}?classId=${encoded}`;
+      setGeneratedLink(link);
+  };
+
+  const copyLink = () => {
+      navigator.clipboard.writeText(generatedLink);
+      alert("Đã sao chép link! Hãy gửi link này vào nhóm lớp (Zalo/Messenger).");
   };
 
   const handleExport = () => {
@@ -372,6 +390,25 @@ function response(data) {
             <div className="max-w-3xl">
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-indigo-700"><History size={24}/> Lịch sử Cập nhật</h3>
                 <div className="relative border-l-2 border-indigo-200 ml-3 space-y-8 pl-6 py-2">
+                     {/* v4.3 */}
+                     <div className="relative">
+                        <span className="absolute -left-[33px] bg-indigo-600 text-white rounded-full p-1.5 ring-4 ring-indigo-50"><BarChart2 size={16}/></span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 4.3 (Student Report)</h4>
+                        <span className="text-xs text-gray-500 font-mono">Transparency Update</span>
+                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
+                            <li><strong>Học sinh xem điểm:</strong> Học sinh có thể tự xem điểm hạnh kiểm, xếp loại và chi tiết lỗi vi phạm/điểm cộng của mình theo từng tuần.</li>
+                            <li><strong>Quyền Lớp Trưởng:</strong> Lớp trưởng có quyền tra cứu kết quả hạnh kiểm của tất cả các bạn trong lớp.</li>
+                        </ul>
+                    </div>
+                     {/* v4.2 */}
+                     <div className="relative">
+                        <span className="absolute -left-[33px] bg-purple-600 text-white rounded-full p-1.5 ring-4 ring-purple-50"><Link size={16}/></span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 4.2 (Smart Link)</h4>
+                        <span className="text-xs text-gray-500 font-mono">Connectivity Update</span>
+                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
+                            <li><strong>Link kết nối tự động:</strong> Giáo viên tạo link chia sẻ, học sinh chỉ cần bấm vào là tự động kết nối Google Sheet, không cần dán URL thủ công.</li>
+                        </ul>
+                    </div>
                      {/* v4.1 */}
                      <div className="relative">
                         <span className="absolute -left-[33px] bg-green-600 text-white rounded-full p-1.5 ring-4 ring-green-50"><Check size={16}/></span>
@@ -379,18 +416,8 @@ function response(data) {
                         <span className="text-xs text-gray-500 font-mono">Mobile Optimization & Stability</span>
                         <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
                             <li><strong>Giao diện Mobile:</strong> Tối ưu hóa trải nghiệm trên điện thoại cho học sinh.</li>
-                            <li><strong>Offline Mode:</strong> Tự động lưu báo cáo vào máy khi mất mạng (không cần chờ kết nối Cloud).</li>
+                            <li><strong>Offline Mode:</strong> Tự động lưu báo cáo vào máy khi mất mạng.</li>
                             <li><strong>Auto Funds:</strong> Tự động tạo phiếu thu tiền khi giáo viên duyệt báo cáo từ Thủ quỹ.</li>
-                        </ul>
-                    </div>
-                     {/* v4.0 */}
-                     <div className="relative">
-                        <span className="absolute -left-[33px] bg-blue-600 text-white rounded-full p-1.5 ring-4 ring-blue-50"><Smile size={16}/></span>
-                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 4.0</h4>
-                        <span className="text-xs text-gray-500 font-mono">Quỹ Lớp & Batch Input</span>
-                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
-                            <li><strong>Sổ Quỹ:</strong> Quản lý tiền thật, thu chi minh bạch.</li>
-                            <li><strong>Nhập liệu nhóm:</strong> Thêm tính năng nhập liệu nhanh cho nhiều học sinh cùng lúc.</li>
                         </ul>
                     </div>
                 </div>
@@ -432,24 +459,52 @@ function response(data) {
                 <section>
                      <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-green-700 border-t pt-8"><Cloud size={24}/> Kết nối Google Sheets</h3>
                      
-                     <div className="bg-white p-6 rounded-lg border shadow-sm">
-                        <label className="block font-semibold text-gray-700 mb-2">Google Apps Script Web App URL</label>
-                        <div className="flex gap-2">
-                            <input 
-                                type="text" 
-                                value={gasUrl} 
-                                onChange={(e) => setGasUrl(e.target.value)} 
-                                placeholder="https://script.google.com/macros/s/......./exec"
-                                className="flex-1 border p-2 rounded focus:ring-2 focus:ring-green-500 outline-none font-mono text-sm"
-                            />
-                            <button 
-                                onClick={handleSaveUrl}
-                                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center gap-2 min-w-[100px] justify-center"
-                            >
-                                {isSaved ? 'Đã lưu!' : <><Save size={18}/> Lưu</>}
-                            </button>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2">Xem hướng dẫn chi tiết ở tab "Kết nối Google Sheet" để lấy URL.</p>
+                     <div className="space-y-4">
+                         <div className="bg-white p-6 rounded-lg border shadow-sm">
+                            <label className="block font-semibold text-gray-700 mb-2">Google Apps Script Web App URL</label>
+                            <div className="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    value={gasUrl} 
+                                    onChange={(e) => setGasUrl(e.target.value)} 
+                                    placeholder="https://script.google.com/macros/s/......./exec"
+                                    className="flex-1 border p-2 rounded focus:ring-2 focus:ring-green-500 outline-none font-mono text-sm"
+                                />
+                                <button 
+                                    onClick={handleSaveUrl}
+                                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center gap-2 min-w-[100px] justify-center"
+                                >
+                                    {isSaved ? 'Đã lưu!' : <><Save size={18}/> Lưu</>}
+                                </button>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">Xem hướng dẫn chi tiết ở tab "Kết nối Google Sheet" để lấy URL.</p>
+                         </div>
+
+                         {/* SHARE LINK SECTION */}
+                         <div className="bg-purple-50 p-6 rounded-lg border border-purple-200">
+                             <h4 className="font-bold text-purple-800 flex items-center gap-2 mb-2"><Share2 size={20}/> Chia sẻ cho Học sinh (Kết nối nhanh)</h4>
+                             <p className="text-sm text-purple-700 mb-4">
+                                 Thay vì gửi URL Script dài dòng, hãy bấm nút dưới đây để tạo một đường link thông minh. 
+                                 Học sinh chỉ cần bấm vào link này là ứng dụng sẽ tự động kết nối với Google Sheet của lớp.
+                             </p>
+                             
+                             {!generatedLink ? (
+                                <button onClick={handleGenerateLink} className="bg-purple-600 text-white px-4 py-2 rounded shadow hover:bg-purple-700 font-bold flex items-center gap-2">
+                                    <Link size={18}/> Tạo Link Chia Sẻ
+                                </button>
+                             ) : (
+                                 <div className="flex gap-2 animate-in fade-in slide-in-from-top-2">
+                                     <input 
+                                        readOnly 
+                                        value={generatedLink} 
+                                        className="flex-1 border p-2 rounded bg-white text-gray-600 text-sm font-mono"
+                                     />
+                                     <button onClick={copyLink} className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 font-bold flex items-center gap-2 whitespace-nowrap">
+                                         <Copy size={18}/> Sao chép
+                                     </button>
+                                 </div>
+                             )}
+                         </div>
                      </div>
                 </section>
             </div>

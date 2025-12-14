@@ -1,5 +1,5 @@
 
-import { Student, ConductRecord, Seat, Settings, AcademicRank, Gender, ROWS, COLS, AttendanceRecord, PendingReport, AttendanceStatus, BehaviorItem, RoleBudgetConfig, PendingOrder, FundTransaction } from '../types';
+import { Student, ConductRecord, Seat, Settings, AcademicRank, Gender, ROWS, COLS, AttendanceRecord, PendingReport, AttendanceStatus, BehaviorItem, RoleBudgetConfig, PendingOrder, FundTransaction, FundCampaign, DutyTask } from '../types';
 import { addLog } from '../utils/logger';
 
 // Default Keys
@@ -11,7 +11,9 @@ const KEY_GAS_URL = 'class_gas_url';
 const KEY_ATTENDANCE = 'class_attendance';
 const KEY_PENDING = 'class_pending_reports';
 const KEY_ORDERS = 'class_pending_orders';
-const KEY_FUNDS = 'class_funds'; // NEW
+const KEY_FUNDS = 'class_funds';
+const KEY_CAMPAIGNS = 'class_fund_campaigns';
+const KEY_DUTY_ROSTER = 'class_duty_roster';
 
 // --- SVG Frames Data ---
 const FRAME_GOLD = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="gold" stroke-width="5"/><circle cx="50" cy="50" r="45" fill="none" stroke="orange" stroke-width="2" stroke-dasharray="10 5"/></svg>`;
@@ -113,6 +115,8 @@ const defaultSettings: Settings = {
   lockedWeeks: [],
   processedWeeks: []
 };
+
+// ... (Existing seedData, getters, setters)
 
 // --- Mock/Seed Data ---
 export const seedData = () => {
@@ -237,13 +241,59 @@ export const savePendingOrders = (orders: PendingOrder[]) => {
     localStorage.setItem(KEY_ORDERS, JSON.stringify(orders));
 }
 
-// --- Fund Transactions (NEW) ---
+// NEW FUNCTION: Send Student Order
+export const sendStudentOrder = async (order: PendingOrder): Promise<boolean> => {
+    const url = getGasUrl();
+    
+    const saveLocally = () => {
+        const current = getPendingOrders();
+        savePendingOrders([...current, { ...order, status: 'PENDING' }]);
+    };
+
+    if (!url) {
+        saveLocally();
+        return true;
+    }
+
+    try {
+        const response = await fetch(url, { method: 'POST', body: JSON.stringify({ action: 'student_order', data: order }) });
+        const result = await response.json();
+        if (result.status === 'success') {
+            return true;
+        } else {
+            throw new Error(result.error || "Unknown cloud error");
+        }
+    } catch (e) {
+        console.error("Cloud order send error, falling back to local:", e);
+        saveLocally();
+        return true;
+    }
+}
+
+// --- Fund Transactions & Campaigns (NEW) ---
 export const getFundTransactions = (): FundTransaction[] => {
     return JSON.parse(localStorage.getItem(KEY_FUNDS) || '[]');
 }
 
 export const saveFundTransactions = (transactions: FundTransaction[]) => {
     localStorage.setItem(KEY_FUNDS, JSON.stringify(transactions));
+}
+
+export const getFundCampaigns = (): FundCampaign[] => {
+    return JSON.parse(localStorage.getItem(KEY_CAMPAIGNS) || '[]');
+}
+
+export const saveFundCampaigns = (campaigns: FundCampaign[]) => {
+    localStorage.setItem(KEY_CAMPAIGNS, JSON.stringify(campaigns));
+}
+
+// --- Duty Roster (NEW) ---
+export const getDutyRoster = (): DutyTask[] => {
+    return JSON.parse(localStorage.getItem(KEY_DUTY_ROSTER) || '[]');
+}
+
+export const saveDutyRoster = (roster: DutyTask[]) => {
+    localStorage.setItem(KEY_DUTY_ROSTER, JSON.stringify(roster));
 }
 
 // --- Settings ---
@@ -306,7 +356,8 @@ export const saveSettings = (settings: Settings) => {
   addLog('CONFIG', 'Đã cập nhật cấu hình hệ thống.');
 };
 
-// --- Seating ---
+// ... (Rest of existing file: Seating, Export, Cloud Sync)
+
 export const getSeatingMap = (): Seat[] => {
   const stored = localStorage.getItem(KEY_SEATING);
   if (stored) return JSON.parse(stored);
@@ -324,7 +375,6 @@ export const saveSeatingMap = (seats: Seat[]) => {
   addLog('SEATING', 'Đã lưu sơ đồ chỗ ngồi mới.');
 };
 
-// --- Google Apps Script URL ---
 export const getGasUrl = (): string => {
   return localStorage.getItem(KEY_GAS_URL) || '';
 };
@@ -334,7 +384,6 @@ export const saveGasUrl = (url: string) => {
   addLog('CONFIG', 'Đã lưu URL kết nối Google Sheet.');
 };
 
-// --- JSON Import/Export ---
 export const exportFullData = () => {
   const data = {
     students: getStudents(),
@@ -342,10 +391,12 @@ export const exportFullData = () => {
     attendance: getAttendance(),
     seating: getSeatingMap(),
     settings: getSettings(),
-    funds: getFundTransactions(), // Include funds
+    funds: getFundTransactions(), 
+    campaigns: getFundCampaigns(),
+    roster: getDutyRoster(),
     gasUrl: getGasUrl(),
     exportDate: new Date().toISOString(),
-    version: '4.1' // Stable Release
+    version: '4.3'
   };
   return JSON.stringify(data, null, 2);
 };
@@ -362,6 +413,8 @@ export const importFullData = (jsonString: string): boolean => {
     if (data.seating) localStorage.setItem(KEY_SEATING, JSON.stringify(data.seating));
     if (data.settings) localStorage.setItem(KEY_SETTINGS, JSON.stringify(data.settings));
     if (data.funds) localStorage.setItem(KEY_FUNDS, JSON.stringify(data.funds));
+    if (data.campaigns) localStorage.setItem(KEY_CAMPAIGNS, JSON.stringify(data.campaigns));
+    if (data.roster) localStorage.setItem(KEY_DUTY_ROSTER, JSON.stringify(data.roster));
     if (data.gasUrl) localStorage.setItem(KEY_GAS_URL, data.gasUrl);
     addLog('SYSTEM', 'Đã khôi phục dữ liệu từ file backup thành công.');
     return true;
@@ -372,7 +425,6 @@ export const importFullData = (jsonString: string): boolean => {
   }
 };
 
-// --- Cloud Sync (Teacher) ---
 export const uploadToCloud = async (): Promise<boolean> => {
     const url = getGasUrl();
     if (!url) {
@@ -387,14 +439,13 @@ export const uploadToCloud = async (): Promise<boolean> => {
             attendance: getAttendance(),
             seating: getSeatingMap(),
             settings: getSettings(),
-            funds: getFundTransactions(), // Sync funds
+            funds: getFundTransactions(),
             timestamp: new Date().toISOString()
         }
     };
     try {
         addLog('CLOUD', 'Đang gửi dữ liệu lên Google Sheets...');
         const response = await fetch(url, { method: 'POST', body: JSON.stringify(payload) });
-        // Try parsing JSON, if fail, usually means HTML error page
         try {
             const result = await response.json();
             if (result.status === 'success') {
@@ -425,7 +476,7 @@ export const downloadFromCloud = async (): Promise<boolean> => {
             result = JSON.parse(text);
         } catch (e) {
              console.error("Cloud response is not JSON:", text.substring(0, 100));
-             throw new Error("Dữ liệu trả về không phải JSON (Có thể do lỗi quyền truy cập hoặc URL sai). Hãy kiểm tra lại Permissions là 'Anyone'.");
+             throw new Error("Dữ liệu trả về không phải JSON.");
         }
 
         if (result.status === 'success' && result.data) {
@@ -448,17 +499,13 @@ export const downloadFromCloud = async (): Promise<boolean> => {
     }
 };
 
-// --- Student API (Remote) ---
-// UPDATED: Now fetches full student list to allow auth (roles, password) on client side
 export const fetchStudentsForPortal = async (): Promise<Student[]> => {
     const url = getGasUrl();
-    // Fallback to local if no URL (Testing mode)
     if (!url) return getStudents();
 
     try {
         const response = await fetch(url, { method: 'POST', body: JSON.stringify({ action: 'load' }) });
         const result = await response.json();
-        // The load action returns { data: { students: [...] } }
         if (result.status === 'success' && result.data && result.data.students) {
             return result.data.students;
         }
@@ -466,6 +513,24 @@ export const fetchStudentsForPortal = async (): Promise<Student[]> => {
     } catch (e) {
         console.error("Cloud fetch error, using local fallback", e);
         return getStudents();
+    }
+};
+
+// NEW: Fetch Conduct for Portal
+export const fetchConductForPortal = async (): Promise<ConductRecord[]> => {
+    const url = getGasUrl();
+    if (!url) return getConductRecords();
+
+    try {
+        const response = await fetch(url, { method: 'POST', body: JSON.stringify({ action: 'load' }) });
+        const result = await response.json();
+        if (result.status === 'success' && result.data && result.data.conduct) {
+            return result.data.conduct;
+        }
+        return getConductRecords();
+    } catch (e) {
+        console.error("Cloud fetch error, using local fallback", e);
+        return getConductRecords();
     }
 };
 
@@ -483,7 +548,6 @@ export const fetchBehaviorList = async (): Promise<BehaviorItem[]> => {
     }
 }
 
-// Fetch Settings Remote
 export const fetchSettings = async (): Promise<Settings> => {
     const url = getGasUrl();
     if (!url) return getSettings();
@@ -498,7 +562,6 @@ export const fetchSettings = async (): Promise<Settings> => {
     }
 }
 
-// Deprecated in v4 (Roles are on Student object now)
 export const fetchRolesFromCloud = async (): Promise<any[]> => {
     return [];
 }
@@ -506,20 +569,17 @@ export const fetchRolesFromCloud = async (): Promise<any[]> => {
 export const sendStudentReport = async (report: PendingReport): Promise<boolean> => {
     const url = getGasUrl();
     
-    // Function to save locally
     const saveLocally = () => {
         const current = getPendingReports();
         savePendingReports([...current, { ...report, status: 'PENDING' }]);
     };
 
-    // If no URL, just save locally
     if (!url) {
         saveLocally();
         return true;
     }
 
     try {
-        // Try to send to Cloud
         const response = await fetch(url, { method: 'POST', body: JSON.stringify({ action: 'student_submit', data: report }) });
         const result = await response.json();
         if (result.status === 'success') {
@@ -528,16 +588,15 @@ export const sendStudentReport = async (report: PendingReport): Promise<boolean>
             throw new Error(result.error || "Unknown cloud error");
         }
     } catch (e) {
-        // Fallback to local on ANY error (network, server, parsing)
         console.error("Cloud send error, falling back to local:", e);
         saveLocally();
-        return true; // Return true to indicate "Success" to the UI, even though it's local
+        return true;
     }
 };
 
 export const fetchPendingReportsCloud = async (): Promise<boolean> => {
     const url = getGasUrl();
-    if (!url) return true; // Just use local
+    if (!url) return true; 
     try {
          const response = await fetch(url, { method: 'POST', body: JSON.stringify({ action: 'get_pending' }) });
          const result = await response.json();
@@ -545,18 +604,13 @@ export const fetchPendingReportsCloud = async (): Promise<boolean> => {
              const currentLocal = getPendingReports();
              const newReports = result.data as PendingReport[];
              
-             // Merge strategy: Keep local state if exists (preserving APPROVED/REJECTED), add new ones as PENDING
              const mergedReports = [...currentLocal];
-             
              newReports.forEach(cloudReport => {
                  const exists = mergedReports.find(local => local.id === cloudReport.id);
                  if (!exists) {
-                     // Add new report from cloud
                      mergedReports.push({ ...cloudReport, status: 'PENDING' });
                  }
-                 // If exists, we ignore cloud version to respect local processing status
              });
-             
              savePendingReports(mergedReports);
              return true;
          }
