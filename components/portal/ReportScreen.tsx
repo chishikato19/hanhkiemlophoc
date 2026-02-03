@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Student, Settings, BehaviorItem, PendingReport, AttendanceStatus, FundCampaign } from '../../types';
-import { Send, Clock, AlertTriangle, Coins, Banknote, Brush, Plus, CheckSquare, Square, Search, ArrowRight } from 'lucide-react';
+import { Send, Clock, AlertTriangle, Coins, Banknote, Brush, Plus, CheckSquare, Square, Search, ArrowRight, Calendar } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import LaborView from './LaborView';
 import { getFundCampaigns, saveFundCampaigns, sendStudentReport } from '../../services/dataService';
@@ -32,10 +32,32 @@ const ReportScreen: React.FC<Props> = ({
         permissions.has('ATTENDANCE') ? 'ATTENDANCE' : permissions.has('FUND') ? 'FUND' : permissions.has('LABOR') ? 'LABOR' : 'BONUS'
     );
     
+    // Helper to calculate current week based on semester start date
+    const getCurrentWeek = () => {
+        if (!settings?.semesterStartDate) return 1;
+        try {
+            const startDate = new Date(settings.semesterStartDate);
+            const today = new Date();
+            // Reset time part to ensure day diff calculation is consistent
+            startDate.setHours(0,0,0,0);
+            today.setHours(0,0,0,0);
+            
+            const diffTime = today.getTime() - startDate.getTime();
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            // Week starts at 1. If diffDays is 0-6, it's week 1.
+            const week = Math.floor(diffDays / 7) + 1;
+            return week > 0 ? week : 1;
+        } catch (e) {
+            return 1;
+        }
+    };
+
     // Internal state specific to reporting
     const [attendanceMarks, setAttendanceMarks] = useState<Record<string, AttendanceStatus | null>>({});
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-    const [selectedWeek, setSelectedWeek] = useState(1);
+    // Initialize with current calculated week
+    const [selectedWeek, setSelectedWeek] = useState(getCurrentWeek());
     const [selectedBehaviorId, setSelectedBehaviorId] = useState('');
     const [bonusAmount, setBonusAmount] = useState(1);
     const [note, setNote] = useState('');
@@ -326,8 +348,19 @@ const ReportScreen: React.FC<Props> = ({
             ) : (
                 <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                     <div className="p-2 border-b flex items-center gap-2 shrink-0">
+                        {/* Week Selector for Mobile Portal */}
+                        <select 
+                            value={selectedWeek} 
+                            onChange={(e) => setSelectedWeek(parseInt(e.target.value))}
+                            className="text-xs font-bold border-r pr-2 outline-none bg-transparent text-indigo-700"
+                        >
+                            {Array.from({length: 35}).map((_, i) => (
+                                <option key={i+1} value={i+1}>Tuần {i+1}</option>
+                            ))}
+                        </select>
+
                         <Search size={16} className="text-gray-400"/>
-                        <input className="flex-1 outline-none text-base" placeholder="Tìm tên học sinh..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)} />
+                        <input className="flex-1 outline-none text-base" placeholder="Tìm tên..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)} />
                         {reportType !== 'ATTENDANCE' && <button type="button" onClick={handleSelectAllVisible} className="text-xs bg-orange-100 text-orange-700 px-3 py-1.5 rounded font-bold">Chọn hết</button>}
                     </div>
                     
