@@ -252,6 +252,14 @@ const ConductManager: React.FC<Props> = ({ setHasUnsavedChanges }) => {
   const handleCloudSave = async () => { setIsSaving(true); const success = await uploadToCloud(); setIsSaving(false); if (success) { setHasUnsavedChanges(false); alert("Đã lưu và đồng bộ thành công!"); } else { alert("Lưu thất bại."); } };
   
   const getWeekLabel = (weekNum: number) => {
+      const dates = settings.weekStartDates;
+      if (dates && dates[weekNum - 1]) {
+          const start = new Date(dates[weekNum - 1]);
+          const end = new Date(start);
+          end.setDate(start.getDate() + 6);
+          return `Tuần ${weekNum} (${start.getDate()}/${start.getMonth()+1} - ${end.getDate()}/${end.getMonth()+1})`;
+      }
+      // Fallback
       if (!settings.semesterStartDate) return `Tuần ${weekNum}`;
       const start = new Date(settings.semesterStartDate); start.setDate(start.getDate() + (weekNum - 1) * 7);
       const end = new Date(start); end.setDate(end.getDate() + 6);
