@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, ArrowDown, ArrowUp, ArrowUpDown, Pencil, Trash2, Key, Lock, Wallet, Save, RefreshCw, AlertTriangle, Plus } from 'lucide-react';
+import { Settings as SettingsIcon, ArrowDown, ArrowUp, ArrowUpDown, Pencil, Trash2, Key, Lock, Wallet, Save, RefreshCw, AlertTriangle, Plus, Calendar } from 'lucide-react';
 import { Settings, BehaviorItem, BehaviorCategory } from '../types';
 import { getSettings, saveSettings, getConductRecords, saveConductRecords } from '../services/dataService';
 import { addLog } from '../utils/logger';
@@ -29,6 +29,30 @@ const SettingsManager: React.FC = () => {
     const updateSettingsState = (partial: Partial<Settings>) => {
         const updated = { ...settings, ...partial };
         handleSaveSettings(updated);
+    };
+
+    const handleWeekDateChange = (index: number, newDate: string) => {
+        if (!newDate) return;
+        
+        const newDates = [...(settings.weekStartDates || [])];
+        newDates[index] = newDate;
+
+        // Rippling effect: Update all subsequent weeks
+        for (let i = index + 1; i < 35; i++) {
+            const prev = new Date(newDates[i - 1]);
+            const next = new Date(prev);
+            next.setDate(prev.getDate() + 7);
+            newDates[i] = next.toISOString().split('T')[0];
+        }
+
+        const updated = { ...settings, weekStartDates: newDates };
+        // If it's the first week, also update semesterStartDate
+        if (index === 0) {
+            updated.semesterStartDate = newDate;
+        }
+
+        handleSaveSettings(updated);
+        addLog('CONFIG', `Đã cập nhật lịch học bắt đầu từ Tuần ${index + 1}.`);
     };
 
     // Helper to strip points suffix like " (-2đ)" or " (+5đ)" from stored records
@@ -252,7 +276,7 @@ const SettingsManager: React.FC = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Ngày bắt đầu HK1</label>
-                                        <input type="date" value={settings.semesterStartDate} onChange={e => updateSettingsState({ semesterStartDate: e.target.value })} className="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500"/>
+                                        <input type="date" value={settings.semesterStartDate} onChange={e => handleWeekDateChange(0, e.target.value)} className="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500"/>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Tuần bắt đầu HK2</label>
@@ -262,6 +286,45 @@ const SettingsManager: React.FC = () => {
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Điểm mặc định tuần</label>
                                         <input type="number" value={settings.defaultScore} onChange={e => updateSettingsState({ defaultScore: parseInt(e.target.value) })} className="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500"/>
                                     </div>
+                                </div>
+                            </section>
+
+                            <section className="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                                <h4 className="font-bold text-gray-800 text-base mb-4 flex items-center gap-2"><Calendar size={20}/> Quản lý Lịch học (Tuần)</h4>
+                                <p className="text-sm text-gray-500 mb-4 italic">Thay đổi ngày bắt đầu của một tuần cụ thể nếu có khoảng nghỉ (như nghỉ Tết). Các tuần sau sẽ tự động cập nhật theo quy tắc +7 ngày.</p>
+                                
+                                <div className="max-h-[300px] overflow-y-auto border rounded-lg bg-white">
+                                    <table className="w-full text-left text-sm border-collapse">
+                                        <thead className="bg-gray-100 sticky top-0">
+                                            <tr>
+                                                <th className="p-2 border-b">Tuần</th>
+                                                <th className="p-2 border-b">Ngày bắt đầu (Thứ 2)</th>
+                                                <th className="p-2 border-b">Kết thúc (Chủ nhật)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y">
+                                            {(settings.weekStartDates || []).map((startDate, idx) => {
+                                                const d = new Date(startDate);
+                                                const end = new Date(d);
+                                                end.setDate(d.getDate() + 6);
+                                                
+                                                return (
+                                                    <tr key={idx} className="hover:bg-indigo-50">
+                                                        <td className="p-2 font-bold text-gray-700">Tuần {idx + 1}</td>
+                                                        <td className="p-2">
+                                                            <input 
+                                                                type="date" 
+                                                                value={startDate} 
+                                                                onChange={(e) => handleWeekDateChange(idx, e.target.value)}
+                                                                className="border rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-indigo-400"
+                                                            />
+                                                        </td>
+                                                        <td className="p-2 text-gray-500">{end.toLocaleDateString('vi-VN')}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </section>
                         </div>
