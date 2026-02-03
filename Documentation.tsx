@@ -200,7 +200,7 @@ const Documentation: React.FC = () => {
                         <div className="ml-8 relative">
                              <pre className="bg-gray-800 text-gray-100 p-3 rounded text-xs overflow-x-auto font-mono whitespace-pre-wrap select-all max-h-60 overflow-y-auto">
 {`function doGet(e) {
-  return ContentService.createTextOutput("Smart Classroom API v3.0.0 (Funds Supported) is running.");
+  return ContentService.createTextOutput("Smart Classroom API v3.1.0 (Full Funds Supported) is running.");
 }
 
 function doPost(e) {
@@ -212,32 +212,42 @@ function doPost(e) {
     if (payload.action === 'save') {
       var data = payload.data;
       
-      // Save Students as JSON (This preserves Avatars, Inventory, Coins correctly)
+      // Students
       var sSheet = getSheet(sheet, 'Students'); sSheet.clear();
       if (data.students && data.students.length > 0) {
-        // ID | Name | JSON Data
         var rows = data.students.map(s => [s.id, s.name, JSON.stringify(s)]);
         sSheet.getRange(1, 1, rows.length, 3).setValues(rows);
       }
       
+      // Conduct
       var cSheet = getSheet(sheet, 'Conduct'); cSheet.clear();
       if (data.conduct && data.conduct.length > 0) {
         var cRows = data.conduct.map(c => [c.id, c.studentId, c.week, JSON.stringify(c)]);
         cSheet.getRange(1, 1, cRows.length, 4).setValues(cRows);
       }
       
+      // Attendance
       var aSheet = getSheet(sheet, 'Attendance'); aSheet.clear();
       if (data.attendance && data.attendance.length > 0) {
          var aRows = data.attendance.map(a => [a.id, a.studentId, a.date, JSON.stringify(a)]);
          aSheet.getRange(1, 1, aRows.length, 4).setValues(aRows);
       }
 
+      // Funds (Transactions)
       var fSheet = getSheet(sheet, 'Funds'); fSheet.clear();
       if (data.funds && data.funds.length > 0) {
          var fRows = data.funds.map(f => [f.id, f.date, f.type, f.amount, JSON.stringify(f)]);
          fSheet.getRange(1, 1, fRows.length, 5).setValues(fRows);
       }
+
+      // Fund Campaigns (NEW)
+      var cpSheet = getSheet(sheet, 'Campaigns'); cpSheet.clear();
+      if (data.campaigns && data.campaigns.length > 0) {
+         var cpRows = data.campaigns.map(c => [c.id, c.name, JSON.stringify(c)]);
+         cpSheet.getRange(1, 1, cpRows.length, 3).setValues(cpRows);
+      }
       
+      // Config
       var cfgSheet = getSheet(sheet, 'Config'); cfgSheet.clear();
       var configRows = [
          ['seating', JSON.stringify(data.seating)],
@@ -256,10 +266,7 @@ function doPost(e) {
       var sSheet = sheet.getSheetByName('Students');
       if (sSheet && sSheet.getLastRow() > 0) {
          var rows = sSheet.getRange(1, 1, sSheet.getLastRow(), 3).getValues();
-         result.students = rows.map(r => {
-             try { return JSON.parse(r[2]); } 
-             catch(e) { return {id: r[0], name: r[1], gender: 'Nam', rank: 'Đạt'}; }
-         });
+         result.students = rows.map(r => JSON.parse(r[2]));
       }
       
       var cSheet = sheet.getSheetByName('Conduct');
@@ -278,6 +285,12 @@ function doPost(e) {
       if (fSheet && fSheet.getLastRow() > 0) {
          var rows = fSheet.getRange(1, 1, fSheet.getLastRow(), 5).getValues();
          result.funds = rows.map(r => JSON.parse(r[4]));
+      }
+
+      var cpSheet = sheet.getSheetByName('Campaigns');
+      if (cpSheet && cpSheet.getLastRow() > 0) {
+         var rows = cpSheet.getRange(1, 1, cpSheet.getLastRow(), 3).getValues();
+         result.campaigns = rows.map(r => JSON.parse(r[2]));
       }
       
       var cfgSheet = sheet.getSheetByName('Config');
@@ -370,7 +383,7 @@ function response(data) {
                         <ol className="list-decimal ml-10 text-sm space-y-1">
                             <li>Bấm nút <strong>Deploy (Triển khai)</strong> màu xanh góc trên bên phải &rarr; chọn <strong>New deployment (Bài triển khai mới)</strong>.</li>
                             <li>Bấm biểu tượng bánh răng chọn <strong>Web app</strong>.</li>
-                            <li><strong>Description:</strong> Nhập version mới (vd: v3).</li>
+                            <li><strong>Description:</strong> Nhập version mới (vd: v3.1).</li>
                             <li><strong>Execute as (Thực thi dưới dạng):</strong> Chọn <em>"Me (Chính tôi)"</em>.</li>
                             <li><strong>Who has access (Ai có quyền truy cập):</strong> <span className="text-red-600 font-bold">Bắt buộc chọn "Anyone (Bất kỳ ai)"</span>.</li>
                             <li>Bấm <strong>Deploy</strong>.</li>
@@ -390,6 +403,16 @@ function response(data) {
             <div className="max-w-3xl">
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-indigo-700"><History size={24}/> Lịch sử Cập nhật</h3>
                 <div className="relative border-l-2 border-indigo-200 ml-3 space-y-8 pl-6 py-2">
+                     {/* v4.5 */}
+                     <div className="relative">
+                        <span className="absolute -left-[33px] bg-green-700 text-white rounded-full p-1.5 ring-4 ring-green-50"><Save size={16}/></span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 4.5 (Full Fund Cloud)</h4>
+                        <span className="text-xs text-gray-500 font-mono">Data Persistence Update</span>
+                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
+                            <li><strong>Đồng bộ Quỹ hoàn toàn:</strong> Các đợt thu (Campaigns) hiện đã được lưu trữ trên Google Sheet cùng với các giao dịch. Dữ liệu tài chính của lớp giờ đây an toàn tuyệt đối.</li>
+                            <li><strong>Cập nhật Script:</strong> Cải tiến mã nguồn Apps Script để quản lý thêm trang dữ liệu mới.</li>
+                        </ul>
+                    </div>
                      {/* v4.4 */}
                      <div className="relative">
                         <span className="absolute -left-[33px] bg-indigo-700 text-white rounded-full p-1.5 ring-4 ring-indigo-50"><LayoutGrid size={16}/></span>
@@ -397,26 +420,6 @@ function response(data) {
                         <span className="text-xs text-gray-500 font-mono">Academic Balancing Update</span>
                         <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
                             <li><strong>Thuật toán xếp chỗ mới:</strong> Tự động phân bổ học sinh theo khối 2x2. Đảm bảo mỗi nhóm đều có "hạt nhân" (1 học sinh Tốt hoặc 2-3 học sinh Khá) để hỗ trợ nhau học tập.</li>
-                            <li><strong>Ưu tiên VIP:</strong> Học sinh có Vé Chọn Chỗ VIP sẽ được ưu tiên xếp vào các vị trí hàng đầu trước khi chạy thuật toán cân bằng.</li>
-                        </ul>
-                    </div>
-                     {/* v4.3 */}
-                     <div className="relative">
-                        <span className="absolute -left-[33px] bg-indigo-600 text-white rounded-full p-1.5 ring-4 ring-indigo-50"><BarChart2 size={16}/></span>
-                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 4.3 (Student Report)</h4>
-                        <span className="text-xs text-gray-500 font-mono">Transparency Update</span>
-                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
-                            <li><strong>Học sinh xem điểm:</strong> Học sinh có thể tự xem điểm hạnh kiểm, xếp loại và chi tiết lỗi vi phạm/điểm cộng của mình theo từng tuần.</li>
-                            <li><strong>Quyền Lớp Trưởng:</strong> Lớp trưởng có quyền tra cứu kết quả hạnh kiểm của tất cả các bạn trong lớp.</li>
-                        </ul>
-                    </div>
-                     {/* v4.2 */}
-                     <div className="relative">
-                        <span className="absolute -left-[33px] bg-purple-600 text-white rounded-full p-1.5 ring-4 ring-purple-50"><Link size={16}/></span>
-                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 4.2 (Smart Link)</h4>
-                        <span className="text-xs text-gray-500 font-mono">Connectivity Update</span>
-                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
-                            <li><strong>Link kết nối tự động:</strong> Giáo viên tạo link chia sẻ, học sinh chỉ cần bấm vào là tự động kết nối Google Sheet, không cần dán URL thủ công.</li>
                         </ul>
                     </div>
                 </div>
