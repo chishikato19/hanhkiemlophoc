@@ -31,11 +31,19 @@ const FRAME_PIXEL = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/
 const FRAME_DARK = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="black" stroke-width="8"/><circle cx="50" cy="50" r="46" fill="none" stroke="red" stroke-width="2" stroke-dasharray="20 5"/></svg>`;
 const FRAME_RAINBOW = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="rainbow" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="red"/><stop offset="20%" stop-color="orange"/><stop offset="40%" stop-color="yellow"/><stop offset="60%" stop-color="green"/><stop offset="80%" stop-color="blue"/><stop offset="100%" stop-color="violet"/></linearGradient></defs><circle cx="50" cy="50" r="45" fill="none" stroke="url(%23rainbow)" stroke-width="6"/></svg>`;
 
+const initialSemesterStart = new Date().toISOString().split('T')[0];
+const initialWeekStarts = Array.from({length: 35}).map((_, i) => {
+    const d = new Date(initialSemesterStart);
+    d.setDate(d.getDate() + i * 7);
+    return d.toISOString().split('T')[0];
+});
+
 // Default Settings
 const defaultSettings: Settings = {
   teacherPassword: '123456',
   studentCode: '1111',
-  semesterStartDate: new Date().toISOString().split('T')[0],
+  semesterStartDate: initialSemesterStart,
+  weekStartDates: initialWeekStarts,
   semesterTwoStartWeek: 19,
   thresholds: { good: 80, fair: 65, pass: 50 },
   defaultScore: 100,
@@ -108,76 +116,13 @@ const defaultSettings: Settings = {
     frames: [
         { id: 'frame_wood', label: 'Khung Gỗ', image: FRAME_WOOD, cost: 50 },
         { id: 'frame_silver', label: 'Khung Bạc', image: FRAME_SILVER, cost: 200 },
-        { id: 'frame_gold', label: 'Khung Vàng', image: FRAME_GOLD, cost: 500 },
+        { id: 'frame_gold', label: 'Khung Gàng', image: FRAME_GOLD, cost: 500 },
         { id: 'frame_fire', label: 'Hỏa Thần', image: FRAME_FIRE, cost: 1000 }
     ]
   },
   studentRoles: [],
   lockedWeeks: [],
   processedWeeks: []
-};
-
-// ... (Existing seedData, getters, setters)
-
-// --- Mock/Seed Data ---
-export const seedData = () => {
-  const students: Student[] = Array.from({ length: 40 }).map((_, i) => ({
-    id: `STU-${i + 1}`,
-    name: `Học sinh ${i + 1}`,
-    gender: i % 2 === 0 ? Gender.MALE : Gender.FEMALE,
-    rank: i < 10 ? AcademicRank.GOOD : i < 25 ? AcademicRank.FAIR : i < 35 ? AcademicRank.PASS : AcademicRank.FAIL,
-    isTalkative: i % 5 === 0,
-    isActive: true,
-    password: '123', // Default Password
-    roles: i === 0 ? ['MONITOR'] : i === 1 ? ['VICE_STUDY'] : i === 2 ? ['VICE_DISCIPLINE'] : i === 3 ? ['TREASURER'] : [],
-    balance: Math.floor(Math.random() * 200) + 100, // Giving some coins for testing
-    badges: [],
-    inventory: [],
-    avatarUrl: undefined,
-    ownedAvatars: [],
-    frameUrl: undefined,
-    ownedFrames: [],
-    hasPrioritySeating: false
-  }));
-
-  const conduct: ConductRecord[] = [];
-  students.forEach(s => {
-    // Generate 4 weeks of data
-    for (let w = 1; w <= 4; w++) {
-      const isGoodWeek = Math.random() > 0.3;
-      const score = isGoodWeek ? Math.floor(Math.random() * 20) + 80 : Math.floor(Math.random() * 40) + 40; 
-      
-      const violations = score < 80 ? ['Nói chuyện riêng'] : [];
-      const positive = score >= 90 ? ['Phát biểu xây dựng bài'] : [];
-
-      conduct.push({
-        id: `CON-${s.id}-W${w}`,
-        studentId: s.id,
-        week: w,
-        score: score,
-        violations: violations,
-        positiveBehaviors: positive
-      });
-    }
-  });
-
-  const attendance: AttendanceRecord[] = [];
-  const pending: PendingReport[] = [];
-  const funds: FundTransaction[] = [
-      { id: 'FT-1', date: new Date().toISOString(), type: 'IN', amount: 500000, category: 'Quỹ lớp', description: 'Thu quỹ đầu năm', relatedStudentIds: [] },
-      { id: 'FT-2', date: new Date().toISOString(), type: 'OUT', amount: 100000, category: 'Photo', description: 'Photo tài liệu tuần 1' }
-  ];
-  
-  localStorage.setItem(KEY_STUDENTS, JSON.stringify(students));
-  localStorage.setItem(KEY_CONDUCT, JSON.stringify(conduct));
-  localStorage.setItem(KEY_SETTINGS, JSON.stringify(defaultSettings));
-  localStorage.setItem(KEY_ATTENDANCE, JSON.stringify(attendance));
-  localStorage.setItem(KEY_PENDING, JSON.stringify(pending));
-  localStorage.setItem(KEY_FUNDS, JSON.stringify(funds));
-  localStorage.removeItem(KEY_ORDERS);
-  
-  addLog('SYSTEM', 'Đã khởi tạo dữ liệu mẫu thành công.');
-  window.location.reload();
 };
 
 // --- Students ---
@@ -303,6 +248,16 @@ export const getSettings = (): Settings => {
   if (stored) {
     const parsed = JSON.parse(stored);
 
+    // Ensure weekStartDates exists
+    if (!parsed.weekStartDates || parsed.weekStartDates.length < 35) {
+        const baseDate = parsed.semesterStartDate || initialSemesterStart;
+        parsed.weekStartDates = Array.from({length: 35}).map((_, i) => {
+            const d = new Date(baseDate);
+            d.setDate(d.getDate() + i * 7);
+            return d.toISOString().split('T')[0];
+        });
+    }
+
     // Helper to merge lists (Defaults + Saved)
     const mergeLists = (defaults: any[], saved: any[]) => {
         const merged = [...defaults];
@@ -357,7 +312,66 @@ export const saveSettings = (settings: Settings) => {
   addLog('CONFIG', 'Đã cập nhật cấu hình hệ thống.');
 };
 
-// ... (Rest of existing file: Seating, Export, Cloud Sync)
+// --- Mock/Seed Data ---
+export const seedData = () => {
+  const students: Student[] = Array.from({ length: 40 }).map((_, i) => ({
+    id: `STU-${i + 1}`,
+    name: `Học sinh ${i + 1}`,
+    gender: i % 2 === 0 ? Gender.MALE : Gender.FEMALE,
+    rank: i < 10 ? AcademicRank.GOOD : i < 25 ? AcademicRank.FAIR : i < 35 ? AcademicRank.PASS : AcademicRank.FAIL,
+    isTalkative: i % 5 === 0,
+    isActive: true,
+    password: '123', // Default Password
+    roles: i === 0 ? ['MONITOR'] : i === 1 ? ['VICE_STUDY'] : i === 2 ? ['VICE_DISCIPLINE'] : i === 3 ? ['TREASURER'] : [],
+    balance: Math.floor(Math.random() * 200) + 100, // Giving some coins for testing
+    badges: [],
+    inventory: [],
+    avatarUrl: undefined,
+    ownedAvatars: [],
+    frameUrl: undefined,
+    ownedFrames: [],
+    hasPrioritySeating: false
+  }));
+
+  const conduct: ConductRecord[] = [];
+  students.forEach(s => {
+    // Generate 4 weeks of data
+    for (let w = 1; w <= 4; w++) {
+      const isGoodWeek = Math.random() > 0.3;
+      const score = isGoodWeek ? Math.floor(Math.random() * 20) + 80 : Math.floor(Math.random() * 40) + 40; 
+      
+      const violations = score < 80 ? ['Nói chuyện riêng'] : [];
+      const positive = score >= 90 ? ['Phát biểu xây dựng bài'] : [];
+
+      conduct.push({
+        id: `CON-${s.id}-W${w}`,
+        studentId: s.id,
+        week: w,
+        score: score,
+        violations: violations,
+        positiveBehaviors: positive
+      });
+    }
+  });
+
+  const attendance: AttendanceRecord[] = [];
+  const pending: PendingReport[] = [];
+  const funds: FundTransaction[] = [
+      { id: 'FT-1', date: new Date().toISOString(), type: 'IN', amount: 500000, category: 'Quỹ lớp', description: 'Thu quỹ đầu năm', relatedStudentIds: [] },
+      { id: 'FT-2', date: new Date().toISOString(), type: 'OUT', amount: 100000, category: 'Photo', description: 'Photo tài liệu tuần 1' }
+  ];
+  
+  localStorage.setItem(KEY_STUDENTS, JSON.stringify(students));
+  localStorage.setItem(KEY_CONDUCT, JSON.stringify(conduct));
+  localStorage.setItem(KEY_SETTINGS, JSON.stringify(defaultSettings));
+  localStorage.setItem(KEY_ATTENDANCE, JSON.stringify(attendance));
+  localStorage.setItem(KEY_PENDING, JSON.stringify(pending));
+  localStorage.setItem(KEY_FUNDS, JSON.stringify(funds));
+  localStorage.removeItem(KEY_ORDERS);
+  
+  addLog('SYSTEM', 'Đã khởi tạo dữ liệu mẫu thành công.');
+  window.location.reload();
+};
 
 export const getSeatingMap = (): Seat[] => {
   const stored = localStorage.getItem(KEY_SEATING);
