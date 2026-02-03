@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Printer, Download, X, Calendar, LayoutGrid } from 'lucide-react';
+import { Printer, Download, X, Calendar, LayoutGrid, Copy } from 'lucide-react';
 import { DutyTask, Student, PendingReport } from '../../types';
 import { getDutyRoster, saveDutyRoster, sendStudentReport } from '../../services/dataService';
 
@@ -78,27 +78,60 @@ const LaborView: React.FC<Props> = ({ students, currentUser, onLoading, filtered
         alert(`Đã đánh giá ${rating} cho ${student.name}`);
     };
 
-    const handleExportRoster = async () => {
+    const generateImage = async (copyToClipboard: boolean = false) => {
         if (!rosterRef.current) return;
         try {
             onLoading(true);
-            // Wait for images/fonts if needed, but plain DOM should be fast
-            const canvas = await html2canvas(rosterRef.current, { scale: 2, useCORS: true });
-            const link = document.createElement('a');
-            link.download = viewMode === 'WEEKLY' ? `PhanCong_CaTuan_Tuan${selectedWeek}.png` : `PhanCong_Thu${selectedDay}_Tuan${selectedWeek}.png`;
-            link.href = canvas.toDataURL();
-            link.click();
-            onLoading(false);
+            // CLONE NODE TECHNIQUE:
+            // Clone the element to a hidden container to capture full width/content regardless of current scroll
+            const element = rosterRef.current;
+            const clone = element.cloneNode(true) as HTMLElement;
+            
+            // Set styles to ensure full capture
+            clone.style.position = 'fixed';
+            clone.style.top = '-10000px';
+            clone.style.left = '-10000px';
+            clone.style.width = '1200px'; // Force desktop width for nice layout
+            clone.style.height = 'auto';
+            clone.style.zIndex = '-1000';
+            clone.style.overflow = 'visible';
+            
+            document.body.appendChild(clone);
+
+            const canvas = await html2canvas(clone, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+            
+            document.body.removeChild(clone);
+
+            if (copyToClipboard) {
+                canvas.toBlob(async (blob: Blob | null) => {
+                    if (blob) {
+                        try {
+                            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                            alert("✅ Đã sao chép ảnh lịch trực! Dán vào Zalo/Messenger ngay.");
+                        } catch (err) {
+                            alert("Không thể copy tự động. Hãy dùng nút Tải về.");
+                        }
+                    }
+                    onLoading(false);
+                });
+            } else {
+                const link = document.createElement('a');
+                link.download = `PhanCong_Tuan${selectedWeek}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+                onLoading(false);
+            }
         } catch (e) { 
             onLoading(false);
-            alert("Lỗi xuất ảnh"); 
+            console.error(e);
+            alert("Lỗi xuất ảnh."); 
         }
     };
 
     const renderRosterCard = (day: number, readOnly: boolean = false) => {
         const duty = getDutyForDay(day);
         return (
-            <div className={`border rounded bg-white p-2 flex flex-col h-full ${readOnly ? 'shadow-sm' : ''}`}>
+            <div className={`border rounded bg-white p-2 flex flex-col h-full ${readOnly ? 'shadow-sm border-gray-200' : ''}`}>
                 <h5 className="font-bold text-center mb-2 text-indigo-700 uppercase bg-indigo-50 py-1 rounded text-sm">Thứ {day}</h5>
                 <div className="flex-1 space-y-2">
                     {['morning', 'board', 'afternoon'].map(time => (
@@ -111,7 +144,7 @@ const LaborView: React.FC<Props> = ({ students, currentUser, onLoading, filtered
                                         {!readOnly && <button type="button" onClick={() => updateDuty(day, time as any, sid, true)}><X size={10} className="text-red-400"/></button>}
                                     </div>
                                 ))}
-                                {(!readOnly && (duty as any)[time]?.length === 0) && <div className="text-[10px] text-gray-300 text-center">Kéo vào đây</div>}
+                                {(!readOnly && (duty as any)[time]?.length === 0) && <div className="text-[10px] text-gray-300 text-center italic">--</div>}
                             </div>
                         </div>
                     ))}
@@ -166,7 +199,7 @@ const LaborView: React.FC<Props> = ({ students, currentUser, onLoading, filtered
                 <div className="flex-1 flex flex-col h-full">
                     <div className="flex justify-between items-center mb-2">
                         {viewMode === 'DAILY' ? (
-                            <div className="flex gap-1 overflow-x-auto no-scrollbar max-w-[60%]">
+                            <div className="flex gap-1 overflow-x-auto no-scrollbar max-w-[50%]">
                                 {[2,3,4,5,6,7].map(d => (<button key={d} type="button" onClick={() => setSelectedDay(d)} className={`w-8 h-8 rounded text-xs font-bold shrink-0 ${selectedDay === d ? 'bg-indigo-600 text-white' : 'bg-white border'}`}>T{d}</button>))}
                             </div>
                         ) : (
@@ -177,7 +210,12 @@ const LaborView: React.FC<Props> = ({ students, currentUser, onLoading, filtered
                             <button onClick={() => setViewMode(viewMode === 'DAILY' ? 'WEEKLY' : 'DAILY')} className="bg-white border text-indigo-600 px-2 py-1 rounded text-xs flex items-center gap-1 font-bold">
                                 {viewMode === 'DAILY' ? <><LayoutGrid size={12}/> Cả tuần</> : <><Calendar size={12}/> Từng ngày</>}
                             </button>
-                            <button type="button" onClick={handleExportRoster} className="bg-green-600 text-white px-2 py-1 rounded text-xs flex items-center gap-1"><Download size={12}/> Ảnh</button>
+                            {viewMode === 'WEEKLY' && (
+                                <>
+                                    <button type="button" onClick={() => generateImage(true)} className="bg-blue-600 text-white px-2 py-1 rounded text-xs flex items-center gap-1" title="Copy ảnh"><Copy size={12}/></button>
+                                    <button type="button" onClick={() => generateImage(false)} className="bg-green-600 text-white px-2 py-1 rounded text-xs flex items-center gap-1" title="Tải ảnh"><Download size={12}/></button>
+                                </>
+                            )}
                         </div>
                     </div>
 
@@ -217,8 +255,8 @@ const LaborView: React.FC<Props> = ({ students, currentUser, onLoading, filtered
                             <div className="h-full overflow-y-auto bg-gray-100 p-2 rounded border">
                                 <div ref={rosterRef} className="bg-white p-4 min-h-full">
                                     <h3 className="text-center font-bold text-lg text-indigo-800 mb-4 uppercase border-b pb-2">Bảng Phân Công Trực Nhật Tuần {selectedWeek}</h3>
-                                    {/* Responsive Grid */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {/* Responsive Grid: Adjusted for better mobile/desktop view */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {[2,3,4,5,6,7].map(d => renderRosterCard(d, true))}
                                     </div>
                                     <div className="mt-4 text-center text-[10px] text-gray-400 italic">Xuất từ Ứng dụng Lớp Học Thông Minh</div>
