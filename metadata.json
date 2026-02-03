@@ -1,5 +1,6 @@
+
 {
-  "name": "Lớp Học Thông Minh v4.3",
-  "description": "Quản lý học sinh toàn diện: Hạnh kiểm, Điểm danh, Sơ đồ lớp, Gamification và Sổ Quỹ (Real-time).",
+  "name": "Lớp Học Thông Minh v4.5",
+  "description": "Quản lý học sinh toàn diện: Hạnh kiểm, Điểm danh, Sơ đồ lớp, Gamification và Sổ Quỹ (Đã đồng bộ Cloud hoàn toàn).",
   "requestFramePermissions": []
 }

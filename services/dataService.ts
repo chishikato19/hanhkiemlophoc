@@ -216,7 +216,7 @@ export const sendStudentOrder = async (order: PendingOrder): Promise<boolean> =>
     }
 }
 
-// --- Fund Transactions & Campaigns (NEW) ---
+// --- Fund Transactions & Campaigns ---
 export const getFundTransactions = (): FundTransaction[] => {
     return JSON.parse(localStorage.getItem(KEY_FUNDS) || '[]');
 }
@@ -233,7 +233,7 @@ export const saveFundCampaigns = (campaigns: FundCampaign[]) => {
     localStorage.setItem(KEY_CAMPAIGNS, JSON.stringify(campaigns));
 }
 
-// --- Duty Roster (NEW) ---
+// --- Duty Roster ---
 export const getDutyRoster = (): DutyTask[] => {
     return JSON.parse(localStorage.getItem(KEY_DUTY_ROSTER) || '[]');
 }
@@ -411,7 +411,7 @@ export const exportFullData = () => {
     roster: getDutyRoster(),
     gasUrl: getGasUrl(),
     exportDate: new Date().toISOString(),
-    version: '4.3'
+    version: '4.5'
   };
   return JSON.stringify(data, null, 2);
 };
@@ -455,6 +455,7 @@ export const uploadToCloud = async (): Promise<boolean> => {
             seating: getSeatingMap(),
             settings: getSettings(),
             funds: getFundTransactions(),
+            campaigns: getFundCampaigns(), // Added
             timestamp: new Date().toISOString()
         }
     };
@@ -495,13 +496,14 @@ export const downloadFromCloud = async (): Promise<boolean> => {
         }
 
         if (result.status === 'success' && result.data) {
-            const { students, conduct, attendance, seating, settings, funds } = result.data;
+            const { students, conduct, attendance, seating, settings, funds, campaigns } = result.data;
             if (students) localStorage.setItem(KEY_STUDENTS, JSON.stringify(students));
             if (conduct) localStorage.setItem(KEY_CONDUCT, JSON.stringify(conduct));
             if (attendance) localStorage.setItem(KEY_ATTENDANCE, JSON.stringify(attendance));
             if (seating) localStorage.setItem(KEY_SEATING, JSON.stringify(seating));
             if (settings) localStorage.setItem(KEY_SETTINGS, JSON.stringify(settings));
             if (funds) localStorage.setItem(KEY_FUNDS, JSON.stringify(funds));
+            if (campaigns) localStorage.setItem(KEY_CAMPAIGNS, JSON.stringify(campaigns)); // Added
             addLog('CLOUD', 'Đã tải và cập nhật dữ liệu từ đám mây.');
             return true;
         } else {
