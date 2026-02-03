@@ -189,6 +189,7 @@ export interface Settings {
   teacherPassword?: string;
   studentCode?: string;
   semesterStartDate: string;
+  weekStartDates?: string[]; // Array of 35 ISO dates
   semesterTwoStartWeek: number;
   thresholds: {
     good: number;
