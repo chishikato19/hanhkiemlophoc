@@ -34,20 +34,24 @@ const ReportScreen: React.FC<Props> = ({
     
     // Helper to calculate current week based on semester start date
     const getCurrentWeek = () => {
-        if (!settings?.semesterStartDate) return 1;
+        if (!settings?.weekStartDates) return 1;
         try {
-            const startDate = new Date(settings.semesterStartDate);
             const today = new Date();
-            // Reset time part to ensure day diff calculation is consistent
-            startDate.setHours(0,0,0,0);
             today.setHours(0,0,0,0);
+            const todayTime = today.getTime();
             
-            const diffTime = today.getTime() - startDate.getTime();
-            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-            
-            // Week starts at 1. If diffDays is 0-6, it's week 1.
-            const week = Math.floor(diffDays / 7) + 1;
-            return week > 0 ? week : 1;
+            // Find the latest week that has started
+            let activeWeek = 1;
+            for (let i = 0; i < settings.weekStartDates.length; i++) {
+                const start = new Date(settings.weekStartDates[i]);
+                start.setHours(0,0,0,0);
+                if (todayTime >= start.getTime()) {
+                    activeWeek = i + 1;
+                } else {
+                    break;
+                }
+            }
+            return activeWeek;
         } catch (e) {
             return 1;
         }
@@ -224,7 +228,7 @@ const ReportScreen: React.FC<Props> = ({
                  <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
                      {permissions.has('ATTENDANCE') && <button type="button" onClick={() => setReportType('ATTENDANCE')} className={`flex-1 py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${reportType === 'ATTENDANCE' ? 'bg-blue-600 text-white shadow' : 'bg-white text-gray-500 border'}`}><Clock size={14}/> Điểm Danh</button>}
                      {permissions.has('VIOLATION') && <button type="button" onClick={() => setReportType('VIOLATION')} className={`flex-1 py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${reportType === 'VIOLATION' ? 'bg-red-600 text-white shadow' : 'bg-white text-gray-500 border'}`}><AlertTriangle size={14}/> Vi Phạm</button>}
-                     {permissions.has('BONUS') && <button type="button" onClick={() => setReportType('BONUS')} className={`flex-1 py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${reportType === 'BONUS' ? 'bg-yellow-500 text-white shadow' : 'bg-white text-gray-500 border'}`}><Coins size={14}/> Thưởng</button>}
+                     {permissions.has('BONUS') && <button type="button" onClick={() => setReportType('BONUS')} className={`flex-1 py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${reportType === 'BONUS' ? 'bg-yellow-50 text-white shadow' : 'bg-white text-gray-500 border'}`}><Coins size={14}/> Thưởng</button>}
                      {permissions.has('FUND') && <button type="button" onClick={() => setReportType('FUND')} className={`flex-1 py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${reportType === 'FUND' ? 'bg-green-600 text-white shadow' : 'bg-white text-gray-500 border'}`}><Banknote size={14}/> Quỹ Lớp</button>}
                      {permissions.has('LABOR') && <button type="button" onClick={() => setReportType('LABOR')} className={`flex-1 py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${reportType === 'LABOR' ? 'bg-indigo-600 text-white shadow' : 'bg-white text-gray-500 border'}`}><Brush size={14}/> Lao Động</button>}
                  </div>
