@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getLogs, clearLogs } from '../utils/logger';
 import { LogEntry } from '../types';
 import { seedData, getGasUrl, saveGasUrl, exportFullData, importFullData } from '../services/dataService';
-import { Bug, Database, Book, History, GitCommit, Download, Upload, Cloud, Save, Copy, Smile, UserCheck, Check, Link, Share2, BarChart2 } from 'lucide-react';
+import { Bug, Database, Book, History, GitCommit, Download, Upload, Cloud, Save, Copy, Smile, UserCheck, Check, Link, Share2, BarChart2, LayoutGrid } from 'lucide-react';
 
 const Documentation: React.FC = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -390,6 +390,16 @@ function response(data) {
             <div className="max-w-3xl">
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-indigo-700"><History size={24}/> Lịch sử Cập nhật</h3>
                 <div className="relative border-l-2 border-indigo-200 ml-3 space-y-8 pl-6 py-2">
+                     {/* v4.4 */}
+                     <div className="relative">
+                        <span className="absolute -left-[33px] bg-indigo-700 text-white rounded-full p-1.5 ring-4 ring-indigo-50"><LayoutGrid size={16}/></span>
+                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 4.4 (Smart Seating)</h4>
+                        <span className="text-xs text-gray-500 font-mono">Academic Balancing Update</span>
+                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
+                            <li><strong>Thuật toán xếp chỗ mới:</strong> Tự động phân bổ học sinh theo khối 2x2. Đảm bảo mỗi nhóm đều có "hạt nhân" (1 học sinh Tốt hoặc 2-3 học sinh Khá) để hỗ trợ nhau học tập.</li>
+                            <li><strong>Ưu tiên VIP:</strong> Học sinh có Vé Chọn Chỗ VIP sẽ được ưu tiên xếp vào các vị trí hàng đầu trước khi chạy thuật toán cân bằng.</li>
+                        </ul>
+                    </div>
                      {/* v4.3 */}
                      <div className="relative">
                         <span className="absolute -left-[33px] bg-indigo-600 text-white rounded-full p-1.5 ring-4 ring-indigo-50"><BarChart2 size={16}/></span>
@@ -407,17 +417,6 @@ function response(data) {
                         <span className="text-xs text-gray-500 font-mono">Connectivity Update</span>
                         <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
                             <li><strong>Link kết nối tự động:</strong> Giáo viên tạo link chia sẻ, học sinh chỉ cần bấm vào là tự động kết nối Google Sheet, không cần dán URL thủ công.</li>
-                        </ul>
-                    </div>
-                     {/* v4.1 */}
-                     <div className="relative">
-                        <span className="absolute -left-[33px] bg-green-600 text-white rounded-full p-1.5 ring-4 ring-green-50"><Check size={16}/></span>
-                        <h4 className="font-bold text-lg text-gray-800">Phiên bản 4.1 (Stable)</h4>
-                        <span className="text-xs text-gray-500 font-mono">Mobile Optimization & Stability</span>
-                        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside bg-gray-50 p-3 rounded-lg border">
-                            <li><strong>Giao diện Mobile:</strong> Tối ưu hóa trải nghiệm trên điện thoại cho học sinh.</li>
-                            <li><strong>Offline Mode:</strong> Tự động lưu báo cáo vào máy khi mất mạng.</li>
-                            <li><strong>Auto Funds:</strong> Tự động tạo phiếu thu tiền khi giáo viên duyệt báo cáo từ Thủ quỹ.</li>
                         </ul>
                     </div>
                 </div>
